@@ -22,11 +22,11 @@ defmodule EctoDiff do
   end
 
   defp do_diff(%struct{} = previous, nil) do
-    primary_key = struct.__schema__(:primary_key)
+    primary_key_fields = struct.__schema__(:primary_key)
 
     %__MODULE__{
       struct: struct,
-      primary_key: Map.take(previous, primary_key),
+      primary_key: Map.take(previous, primary_key_fields),
       changes: %{},
       effect: :deleted,
       previous: previous,
@@ -35,15 +35,15 @@ defmodule EctoDiff do
   end
 
   defp do_diff(%struct{} = previous, %struct{} = current) do
-    primary_key = struct.__schema__(:primary_key)
+    primary_key_fields = struct.__schema__(:primary_key)
 
     changes =
       fields(previous, current)
       |> Map.merge(associations(previous, current))
       |> Map.merge(embeds(previous, current))
 
-    previous_primary_key = Map.take(previous, primary_key)
-    current_primary_key = Map.take(current, primary_key)
+    previous_primary_key = Map.take(previous, primary_key_fields)
+    current_primary_key = Map.take(current, primary_key_fields)
 
     effect =
       if !primary_key_nil?(previous_primary_key) && !primary_key_nil?(current_primary_key) &&
@@ -75,7 +75,7 @@ defmodule EctoDiff do
     previous_value = Map.get(previous, field)
     current_value = Map.get(current, field)
 
-    if previous_value == current_value do
+    if previous_value === current_value do
       acc
     else
       [{field, {previous_value, current_value}} | acc]
@@ -147,20 +147,20 @@ defmodule EctoDiff do
   end
 
   defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc) do
-    primary_key = struct.__schema__(:primary_key)
+    primary_key_fields = struct.__schema__(:primary_key)
 
-    if primary_key == [],
+    if primary_key_fields == [],
       do: raise("cannot determine difference in many association with no primary key for `#{struct}`")
 
     {previous_map, keys} =
       Enum.reduce(previous, {%{}, []}, fn x, {map, keys} ->
-        key = Map.take(x, primary_key)
+        key = Map.take(x, primary_key_fields)
         {Map.put(map, key, x), [key | keys]}
       end)
 
     {current_map, keys} =
       Enum.reduce(current, {%{}, keys}, fn x, {map, keys} ->
-        key = Map.take(x, primary_key)
+        key = Map.take(x, primary_key_fields)
         {Map.put(map, key, x), [key | keys]}
       end)
 
