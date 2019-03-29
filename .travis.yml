@@ -8,8 +8,8 @@ elixir:
   - "1.7"
   - "1.8"
 
-services:
-  - postgresql
+addons:
+  postgresql: "9.6"
 
 cache:
   directories:
