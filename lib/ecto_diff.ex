@@ -3,6 +3,8 @@ defmodule EctoDiff do
   Generates a data structure describing the difference between two Ecto structs.
   """
 
+  alias Ecto.Association.NotLoaded
+
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
   def diff(previous, current) do
@@ -120,21 +122,29 @@ defmodule EctoDiff do
     diff_association(previous_value, current_value, association_details, acc)
   end
 
-  defp diff_association(%Ecto.Association.NotLoaded{}, %Ecto.Association.NotLoaded{}, _assoc, acc) do
-    acc
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :one} = assoc, acc) do
+    diff_association(nil, nil, assoc, acc)
   end
 
-  defp diff_association(_previous, %Ecto.Association.NotLoaded{}, %{field: field}, _acc) do
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :many} = assoc, acc) do
+    diff_association([], [], assoc, acc)
+  end
+
+  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc) do
     raise "previously loaded association `#{field}` not loaded in current struct"
   end
 
-  defp diff_association(%Ecto.Association.NotLoaded{}, current, %{cardinality: :one} = assoc, acc) do
+  defp diff_association(%NotLoaded{}, current, %{cardinality: :one} = assoc, acc) do
     diff_association(nil, current, assoc, acc)
   end
 
-  defp diff_association(%Ecto.Association.NotLoaded{}, current, %{cardinality: :many} = assoc, acc) do
+  defp diff_association(%NotLoaded{}, current, %{cardinality: :many} = assoc, acc) do
     diff_association([], current, assoc, acc)
   end
+
+  defp diff_association(nil, nil, %{cardinality: :one}, acc), do: acc
+
+  defp diff_association([], [], %{cardinality: :many}, acc), do: acc
 
   defp diff_association(previous, current, %{cardinality: :one, field: field}, acc) do
     assoc_diff = do_diff(previous, current)

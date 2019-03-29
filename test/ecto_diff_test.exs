@@ -106,6 +106,22 @@ defmodule EctoDiffTest do
              } = diff
     end
 
+    test "insert with nil belongs_to" do
+      {:ok, pet} = %{name: "Spot", owner: nil} |> Pet.new() |> Repo.insert()
+      id = pet.id
+
+      {:ok, diff} = EctoDiff.diff(nil, pet)
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{id: ^id},
+               changes: %{
+                 id: {nil, ^id},
+                 name: {nil, "Spot"}
+               }
+             } = diff
+    end
+
     test "update with adding a new belongs_to" do
       {:ok, pet} = %{name: "Spot", owner: nil} |> Pet.new() |> Repo.insert()
       {:ok, updated_pet} = pet |> Pet.update(%{owner: %{name: "Chris"}}) |> Repo.update()
@@ -238,6 +254,22 @@ defmodule EctoDiffTest do
                      }
                    }
                  ]
+               }
+             } = diff
+    end
+
+    test "insert with empty has_many" do
+      {:ok, pet} = %{name: "Spot", skills: []} |> Pet.new() |> Repo.insert()
+      id = pet.id
+
+      {:ok, diff} = EctoDiff.diff(nil, pet)
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{id: ^id},
+               changes: %{
+                 id: {nil, ^id},
+                 name: {nil, "Spot"}
                }
              } = diff
     end
