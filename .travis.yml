@@ -25,8 +25,7 @@ script:
   - mix format --check-formatted
   - mix dialyzer --halt-exit-status
   - mix credo --strict
-  - mix ecto.create --quiet
-  - mix ecto.migrate
+  - MIX_ENV=test mix do ecto.create, ecto.migrate
   - mix coveralls.json
 
 after_success:
