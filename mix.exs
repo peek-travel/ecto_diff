@@ -29,7 +29,8 @@ defmodule EctoDiff.MixProject do
       coveralls: :test,
       "coveralls.detail": :test,
       "coveralls.post": :test,
-      "coveralls.html": :test
+      "coveralls.html": :test,
+      "coveralls.json": :test
     ]
   end
 
@@ -43,6 +44,7 @@ defmodule EctoDiff.MixProject do
 
   defp deps do
     [
+      {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ecto, "~> 3.0"},
       {:ecto_sql, "~> 3.0", only: [:dev, :test]},
       {:excoveralls, "~> 0.10", only: :test},
