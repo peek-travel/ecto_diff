@@ -5,8 +5,20 @@ defmodule EctoDiff do
 
   alias Ecto.Association.NotLoaded
 
+  @type effect :: :added | :deleted | :changed | :replaced
+
+  @type t :: %__MODULE__{
+          struct: atom(),
+          primary_key: %{required(atom()) => any()},
+          changes: %{required(atom()) => any()},
+          effect: effect(),
+          previous: Ecto.Schema.t(),
+          current: Ecto.Schema.t()
+        }
+
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
+  @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t()) :: {:ok, t()} | {:ok, :unchanged}
   def diff(previous, current) do
     diff = do_diff(previous, current)
 
