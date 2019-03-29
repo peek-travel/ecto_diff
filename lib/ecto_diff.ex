@@ -51,8 +51,10 @@ defmodule EctoDiff do
   defp do_diff(%struct{} = previous, %struct{} = current) do
     primary_key_fields = struct.__schema__(:primary_key)
 
+    field_changes = fields(previous, current)
+
     changes =
-      fields(previous, current)
+      field_changes
       |> Map.merge(associations(previous, current))
       |> Map.merge(embeds(previous, current))
 
@@ -189,7 +191,8 @@ defmodule EctoDiff do
     keys = keys |> Enum.reverse() |> Enum.uniq()
 
     diffs =
-      Enum.map(keys, fn key ->
+      keys
+      |> Enum.map(fn key ->
         prev_child = Map.get(previous_map, key)
         current_child = Map.get(current_map, key)
 

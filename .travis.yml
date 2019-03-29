@@ -1,0 +1,28 @@
+language: elixir
+
+otp_release:
+  - 20.3
+  - 21.3
+
+elixir:
+  - "1.7"
+  - "1.8"
+
+cache:
+  directories:
+    - priv/plts
+
+install:
+  - mix local.hex --force
+  - mix local.rebar --force
+  - mix deps.get
+
+script:
+  - mix compile --warnings-as-errors
+  - mix format --check-formatted
+  - mix dialyzer --halt-exit-status
+  - mix credo --strict
+  - mix coveralls.json
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
