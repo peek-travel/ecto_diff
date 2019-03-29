@@ -22,3 +22,6 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 ecto_diff-*.tar
 
+# ignore local plts
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
