@@ -8,6 +8,9 @@ elixir:
   - "1.7"
   - "1.8"
 
+services:
+  - postgresql
+
 cache:
   directories:
     - priv/plts
@@ -22,6 +25,8 @@ script:
   - mix format --check-formatted
   - mix dialyzer --halt-exit-status
   - mix credo --strict
+  - mix ecto.create --quiet
+  - mix ecto.migrate
   - mix coveralls.json
 
 after_success:
