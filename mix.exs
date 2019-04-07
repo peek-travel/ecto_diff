@@ -53,13 +53,13 @@ defmodule EctoDiff.MixProject do
       main: "EctoDiff",
       source_ref: @version,
       source_url: @source_url,
-      extras: ["README.md", "LICENSE.md"]
+      extras: ["README.md", "CHANGELOG.md", "LICENSE.md"]
     ]
   end
 
   defp description do
     """
-    Calculate the difference between two Ecto structs
+    Generates a data structure describing the difference between two ecto structs
     """
   end
 

@@ -1,12 +1,46 @@
 defmodule EctoDiff do
   @moduledoc """
-  Generates a data structure describing the difference between two Ecto structs.
+  Generates a data structure describing the difference between two ecto structs.
+
+  For details on how to generate an `t:EctoDiff.t/0` struct, see: `diff/2`.
+
+  For details on what the generated struct looks like, see: `t:EctoDiff.t/0`.
   """
 
   alias Ecto.Association.NotLoaded
 
+  @typedoc """
+  The type of change for a given struct.
+
+  Each `t:EctoDiff.t/0` struct will have a field describing what happened to the given ecto struct. The values can be one of
+  the following:
+
+  * `:added` - This struct is new and was not present previously. This happens when the primary struct, or an associated
+               struct, was added during an update or insert.
+  * `:deleted` - This struct was previously present, but no longer is.
+  * `:changed` - This struct existed previously and still does, but some of its fields and/or associations have changed.
+  * `:replaced` - This struct was replaced with a completely new one. This happens with `belongs_to` or `embeds_one`
+                  associations with the `on_replace: :nilify` option set.
+  """
   @type effect :: :added | :deleted | :changed | :replaced
 
+  @typedoc """
+  Describes all changes made during an insert or update operation.
+
+  The following fields should be considered public:
+
+  * `struct` - The module atom of the ecto schema being diffed.
+  * `primary_key` - The primary key(s) of the ecto struct. This is a `map` of all primary keys in case of composite
+                    keys. For most common use-cases this will just be the map `%{id: id}`.
+  * `changed` - A `map` representing all changes made. The keys will be fields and associations defined in the ecto
+                schema, but only fields and associations with changes will be present. For changed fields, the value
+                will be a `tuple` representing the previous and new values (i.e. `{previous, new}`). For associations,
+                the value will be another `t:EctoDiff.t/0` struct for cardinality "one" associations, or a list of
+                `t:EctoDiff.t/0` structs for cardinality "many" associations.
+  * `effect` - The type of change for this ecto struct. See `t:effect/0` for details.
+  * `previous` - The previous struct itself.
+  * `current` - The current (new) struct itself.
+  """
   @type t :: %__MODULE__{
           struct: atom(),
           primary_key: %{required(atom()) => any()},
@@ -18,6 +52,102 @@ defmodule EctoDiff do
 
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
+  @doc """
+  Returns an `t:EctoDiff.t/0` describing the difference between two given ecto structs.
+
+  The "previous" struct can be `nil`, to represent an insert operation.
+
+  ## Examples
+
+  A new struct being inserted:
+
+        iex> {:ok, pet} = %{name: "Spot"} |> Pet.new() |> Repo.insert()
+        iex> {:ok, diff} = EctoDiff.diff(nil, pet)
+        iex> diff
+        #EctoDiff<
+          struct: Pet,
+          primary_key: %{id: 1},
+          effect: :added,
+          previous: #Pet<>,
+          current: #Pet<>,
+          changes: %{
+            id: {nil, 1},
+            name: {nil, "Spot"}
+          }
+        >
+
+  A struct being updated:
+
+        iex> {:ok, pet} = %{name: "Spot"} |> Pet.new() |> Repo.insert()
+        iex> {:ok, updated_pet} = pet |> Pet.update(%{name: "McFluffFace"}) |> Repo.update()
+        iex> {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+        iex> diff
+        #EctoDiff<
+          struct: Pet,
+          primary_key: %{id: 1},
+          effect: :changed,
+          previous: #Pet<>,
+          current: #Pet<>,
+          changes: %{
+            name: {"Spot", "McFluffFace"}
+          }
+        >
+
+  A nested has_many association being updated:
+
+        iex> {:ok, initial_pet} =
+        ...>   %{name: "Spot", skills: [%{name: "Eating"}, %{name: "Sleeping"}, %{name: "Scratching"}]}
+        ...>   |> Pet.new()
+        ...>   |> Repo.insert()
+        iex> [eating_id, sleeping_id, _scratching_id] = Enum.map(initial_pet.skills, & &1.id)
+        iex> {:ok, updated_pet} =
+        ...>   initial_pet
+        ...>   |> Pet.update(%{skills: [%{id: eating_id}, %{id: sleeping_id, level: 2}, %{name: "Meowing"}]})
+        ...>   |> Repo.update()
+        iex> {:ok, diff} = EctoDiff.diff(initial_pet, updated_pet)
+        iex> diff
+        #EctoDiff<
+          struct: Pet,
+          primary_key: %{id: 1},
+          effect: :changed,
+          previous: #Pet<>,
+          current: #Pet<>,
+          changes: %{
+            skills: [
+              #EctoDiff<
+                struct: Skill,
+                primary_key: %{id: 2},
+                effect: :changed,
+                previous: #Skill<>,
+                current: #Skill<>,
+                changes: %{
+                  level: {1, 2}
+                }
+              >,
+              #EctoDiff<
+                struct: Skill,
+                primary_key: %{id: 3},
+                effect: :deleted,
+                previous: #Skill<>,
+                current: #Skill<>,
+                changes: %{}
+              >,
+              #EctoDiff<
+                struct: Skill,
+                primary_key: %{id: 4},
+                effect: :added,
+                previous: #Skill<>,
+                current: #Skill<>,
+                changes: %{
+                  id: {nil, 4},
+                  pet_id: {nil, 1},
+                  name: {nil, "Meowing"}
+                }
+              >
+            ]
+          }
+        >
+  """
   @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t()) :: {:ok, t()} | {:ok, :unchanged}
   def diff(previous, current) do
     diff = do_diff(previous, current)
