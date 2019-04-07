@@ -96,36 +96,36 @@ iex> EctoDiff.diff(initial_pet, updated_pet)
 
 {:ok,
  #EctoDiff<
-   struct: EctoDiff.Pet,
+   struct: Pet,
    primary_key: %{id: 2},
    effect: :changed,
-   previous: #EctoDiff.Pet<>,
-   current: #EctoDiff.Pet<>,
+   previous: #Pet<>,
+   current: #Pet<>,
    changes: %{
      name: {"Spot", "Spots"},
      skills: [
        #EctoDiff<
-         struct: EctoDiff.Skill,
+         struct: Skill,
          primary_key: %{id: 5},
          effect: :changed,
-         previous: #EctoDiff.Skill<>,
-         current: #EctoDiff.Skill<>,
+         previous: #Skill<>,
+         current: #Skill<>,
          changes: %{level: {1, 2}}
        >,
        #EctoDiff<
-         struct: EctoDiff.Skill,
+         struct: Skill,
          primary_key: %{id: 6},
          effect: :deleted,
-         previous: #EctoDiff.Skill<>,
+         previous: #Skill<>,
          current: nil,
          changes: %{}
        >,
        #EctoDiff<
-         struct: EctoDiff.Skill,
+         struct: Skill,
          primary_key: %{id: 7},
          effect: :added,
-         previous: #EctoDiff.Skill<>,
-         current: #EctoDiff.Skill<>,
+         previous: #Skill<>,
+         current: #Skill<>,
          changes: %{id: {nil, 7}, name: {nil, "Meowing"}, pet_id: {nil, 2}}
        >
      ]
