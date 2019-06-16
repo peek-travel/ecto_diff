@@ -18,7 +18,7 @@ The package can be installed by adding `ecto_diff` to your list of dependencies 
 ```elixir
 def deps do
   [
-    {:ecto_diff, "~> 0.2.0"}
+    {:ecto_diff, "~> 0.2.1"}
   ]
 end
 ```
