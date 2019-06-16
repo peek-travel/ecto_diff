@@ -1,19 +1,23 @@
 defmodule EctoDiff.DataCase do
+  @moduledoc false
+
   use ExUnit.CaseTemplate
+
+  alias Ecto.Adapters.SQL.Sandbox
 
   using do
     quote do
-      alias EctoDiff.{Repo, Owner, Pet}
+      alias EctoDiff.{Owner, Pet, Repo}
 
       import EctoDiff.DataCase
     end
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(EctoDiff.Repo)
+    :ok = Sandbox.checkout(EctoDiff.Repo)
 
     unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(EctoDiff.Repo, {:shared, self()})
+      Sandbox.mode(EctoDiff.Repo, {:shared, self()})
     end
 
     :ok

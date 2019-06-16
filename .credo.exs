@@ -21,7 +21,7 @@
         # You can give explicit globs or simply directories.
         # In the latter case `**/*.{ex,exs}` will be used.
         #
-        included: ["lib/"],
+        included: ["lib/", "test/"],
         excluded: [~r"/_build/", ~r"/deps/"]
       },
       #
@@ -69,7 +69,7 @@
         # If you don't want these comments to cause `mix credo` to fail, just
         # set this value to 0 (zero).
         #
-        {Credo.Check.Design.TagTODO, [exit_status: 2]},
+        {Credo.Check.Design.TagTODO, [priority: :low, exit_status: 0]},
         {Credo.Check.Design.TagFIXME, []},
 
         #
