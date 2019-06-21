@@ -7,8 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
-- Nothing yet
-
+- Fix missing nil in `EctoDiff.diff/2` typespec
 
 ## [0.2.1][] - 2019-06-15
 

@@ -148,7 +148,7 @@ defmodule EctoDiff do
           }
         >
   """
-  @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t()) :: {:ok, t()} | {:ok, :unchanged}
+  @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil) :: {:ok, t()} | {:ok, :unchanged}
   def diff(previous, current) do
     diff = do_diff(previous, current)
 
