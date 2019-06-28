@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/peek-travel/ecto_diff.svg?branch=master)](https://travis-ci.org/peek-travel/ecto_diff)
 [![codecov](https://codecov.io/gh/peek-travel/ecto_diff/branch/master/graph/badge.svg)](https://codecov.io/gh/peek-travel/ecto_diff)
-[![Ebert](https://ebertapp.io/github/peek-travel/ecto_diff.svg)](https://ebertapp.io/github/peek-travel/ecto_diff)
+[![SourceLevel](https://app.sourcelevel.io/github/peek-travel/ecto_diff.svg)](https://app.sourcelevel.io/github/peek-travel/ecto_diff)
 [![Hex.pm Version](https://img.shields.io/hexpm/v/ecto_diff.svg?style=flat)](https://hex.pm/packages/ecto_diff)
 [![License](https://img.shields.io/hexpm/l/ecto_diff.svg)](LICENSE.md)
 [![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=peek-travel/ecto_diff)](https://dependabot.com)
