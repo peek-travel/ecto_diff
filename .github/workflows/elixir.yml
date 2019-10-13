@@ -10,6 +10,12 @@ jobs:
     container:
       image: elixir:1.9.1-alpine
 
+    services:
+      postgres:
+        image: postgres:12-alpine
+        ports:
+         - 5432
+
     steps:
     - uses: actions/checkout@v1
     - name: Install Dependencies
