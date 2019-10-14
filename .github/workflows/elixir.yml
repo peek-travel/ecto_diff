@@ -3,7 +3,34 @@ name: Elixir CI
 on: push
 
 jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Compile
+        run: mix compile --warnings-as-errors
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: build
+          path: _build
+      - name: Upload dependencies
+        uses: actions/upload-artifact@v1
+        with:
+          name: deps
+          path: deps
+
   test:
+    needs: compile
 
     runs-on: ubuntu-latest
 
@@ -14,16 +41,21 @@ jobs:
       postgres:
         image: postgres:12-alpine
         ports:
-         - 5432:5432
+          - 5432:5432
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Dependencies
-      run: |
-        mix local.rebar --force
-        mix local.hex --force
-        mix deps.get
-    - name: Run Tests
-      run: mix test
-      env:
-        DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
+      - uses: actions/checkout@v1
+      - name: Download build artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: build
+          path: .
+      - name: Download deps
+        uses: actions/download-artifact@v1
+        with:
+          name: deps
+          path: .
+      - name: Run Tests
+        run: mix test
+        env:
+          DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
