@@ -1,6 +1,6 @@
 # EctoDiff
 
-[![Build Status](https://travis-ci.com/peek-travel/ecto_diff.svg?branch=master)](https://travis-ci.org/peek-travel/ecto_diff)
+[![CI Status](https://github.com/peek-travel/ecto_diff/workflows/CI/badge.svg)](https://github.com/peek-travel/ecto_diff/actions)
 [![codecov](https://codecov.io/gh/peek-travel/ecto_diff/branch/master/graph/badge.svg)](https://codecov.io/gh/peek-travel/ecto_diff)
 [![SourceLevel](https://app.sourcelevel.io/github/peek-travel/ecto_diff.svg)](https://app.sourcelevel.io/github/peek-travel/ecto_diff)
 [![Hex.pm Version](https://img.shields.io/hexpm/v/ecto_diff.svg?style=flat)](https://hex.pm/packages/ecto_diff)
