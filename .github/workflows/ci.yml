@@ -1,0 +1,130 @@
+name: CI
+
+on: push
+
+env:
+  MIX_ENV: test
+
+jobs:
+  compile:
+    name: Compile
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Compile
+        run: mix compile --warnings-as-errors
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: _build
+          path: _build
+
+  format:
+    name: "Check Formatted"
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Check formatted
+        run: mix format --check-formatted
+
+  test:
+    name: Tests
+
+    needs: compile
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    services:
+      postgres:
+        image: postgres:12-alpine
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Download build artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: _build
+          path: _build
+      - name: Run tests
+        run: mix coveralls.json
+        env:
+          DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
+      - uses: codecov/codecov-action@v1.0.2
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+
+  credo:
+    name: Credo
+
+    needs: compile
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Download build artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: _build
+          path: _build
+      - name: Run credo
+        run: mix credo --strict
+
+  dialyzer:
+    name: Dialyzer
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    env:
+      MIX_ENV: dev
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Run dialyzer
+        run: mix dialyzer --halt-exit-status

@@ -17,7 +17,8 @@ defmodule EctoDiff.MixProject do
       dialyzer: dialyzer(),
       docs: docs(),
       description: description(),
-      package: package()
+      package: package(),
+      aliases: aliases()
     ]
   end
 
@@ -79,13 +80,19 @@ defmodule EctoDiff.MixProject do
   defp deps do
     [
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.5", only: [:dev], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.5", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.0", only: [:dev, :test]},
       {:ecto, "~> 3.0"},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test},
       {:jason, ">= 1.0.0", only: [:dev, :test]},
       {:postgrex, ">= 0.0.0", only: [:dev, :test]}
+    ]
+  end
+
+  defp aliases do
+    [
+      test: ["ecto.create --quiet", "ecto.migrate", "test"]
     ]
   end
 end
