@@ -7,6 +7,8 @@ env:
 
 jobs:
   compile:
+    name: Compile
+
     runs-on: ubuntu-latest
 
     container:
@@ -27,7 +29,27 @@ jobs:
           name: _build
           path: _build
 
+  format:
+    name: "Check Formatted"
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Check formatted
+        run: mix format --check-formatted
+
   test:
+    name: Tests
+
     needs: compile
 
     runs-on: ubuntu-latest
@@ -53,15 +75,14 @@ jobs:
         with:
           name: _build
           path: _build
-      - run: |
-          ls -la
-          ls -la _build
       - name: Run tests
         run: mix test
         env:
           DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
 
   credo:
+    name: Credo
+
     needs: compile
 
     runs-on: ubuntu-latest
@@ -83,3 +104,28 @@ jobs:
           path: _build
       - name: Run credo
         run: mix credo --strict
+
+  dialyzer:
+    name: Dialyzer
+
+    needs: compile
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Download build artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: _build
+          path: _build
+      - name: Run dialyzer
+        run: mix dialyzer --halt-exit-status
