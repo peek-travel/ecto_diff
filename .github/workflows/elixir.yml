@@ -21,13 +21,8 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v1
         with:
-          name: build
+          name: _build
           path: _build
-      - name: Upload dependencies
-        uses: actions/upload-artifact@v1
-        with:
-          name: deps
-          path: deps
 
   test:
     needs: compile
@@ -45,15 +40,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
       - name: Download build artifacts
         uses: actions/download-artifact@v1
         with:
-          name: build
-          path: .
-      - name: Download deps
-        uses: actions/download-artifact@v1
-        with:
-          name: deps
+          name: _build
           path: .
       - name: Run Tests
         run: mix test
