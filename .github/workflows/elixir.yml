@@ -52,7 +52,7 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: _build
-          path: .
+          path: _build
       - run: |
           ls -la
           ls -la _build
@@ -80,6 +80,6 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: _build
-          path: .
+          path: _build
       - name: Run credo
         run: mix credo --strict
