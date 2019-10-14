@@ -2,6 +2,9 @@ name: Elixir CI
 
 on: push
 
+env:
+  MIX_ENV: test
+
 jobs:
   compile:
     runs-on: ubuntu-latest
@@ -11,7 +14,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           mix local.rebar --force
           mix local.hex --force
@@ -40,6 +43,34 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+      - name: Install dependencies
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+      - name: Download build artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: _build
+          path: .
+      - run: |
+          ls -la
+          ls -la _build
+      - name: Run tests
+        run: mix test
+        env:
+          DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
+
+  credo:
+    needs: compile
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: elixir:1.9.1-alpine
+
+    steps:
+      - uses: actions/checkout@v1
       - name: Install Dependencies
         run: |
           mix local.rebar --force
@@ -50,7 +81,5 @@ jobs:
         with:
           name: _build
           path: .
-      - name: Run Tests
-        run: mix test
-        env:
-          DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
+      - name: Run credo
+        run: mix credo --strict
