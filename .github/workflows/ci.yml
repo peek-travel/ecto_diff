@@ -6,20 +6,6 @@ env:
   MIX_ENV: test
 
 jobs:
-  format:
-    name: "Check Formatted"
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1.2.0
-        with:
-          otp-version: 22.x
-          elixir-version: 1.9.x
-      - name: Check formatted
-        run: mix format --check-formatted
-
   compile:
     name: Compile
 
@@ -51,6 +37,26 @@ jobs:
       - name: Compile
         if: steps.cache-build.outputs.cache-hit != 'true'
         run: mix compile --warnings-as-errors
+
+  format:
+    name: "Check Formatted"
+
+    needs: compile
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1.2.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
+      - uses: actions/cache@v1
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
+      - name: Check formatted
+        run: mix format --check-formatted
 
   test:
     name: Tests
