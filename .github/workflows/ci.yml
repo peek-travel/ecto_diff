@@ -88,7 +88,7 @@ jobs:
       - name: Run tests
         run: mix coveralls.json
         env:
-          DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
+          DATABASE_URL: ecto://postgres@localhost/ecto_diff_test
       - uses: codecov/codecov-action@v1
         with:
           token: ${{secrets.CODECOV_TOKEN}}
