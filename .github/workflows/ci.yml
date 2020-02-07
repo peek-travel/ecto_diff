@@ -6,46 +6,51 @@ env:
   MIX_ENV: test
 
 jobs:
-  compile:
-    name: Compile
-
-    runs-on: ubuntu-latest
-
-    container:
-      image: elixir:1.9.1-alpine
-
-    steps:
-      - uses: actions/checkout@v1
-      - name: Install dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
-      - name: Compile
-        run: mix compile --warnings-as-errors
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v1
-        with:
-          name: _build
-          path: _build
-
   format:
     name: "Check Formatted"
 
     runs-on: ubuntu-latest
 
-    container:
-      image: elixir:1.9.1-alpine
-
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1.2.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
       - name: Check formatted
         run: mix format --check-formatted
+
+  compile:
+    name: Compile
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1.2.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
+      - uses: actions/cache@v1
+        id: cache-mix
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-v5-
+      - uses: actions/cache@v1
+        id: cache-build
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-v3-
+      - name: Install dependencies
+        if: steps.cache-mix.outputs.cache-hit != 'true'
+        run: mix deps.get
+      - name: Compile
+        if: steps.cache-build.outputs.cache-hit != 'true'
+        run: mix compile --warnings-as-errors
 
   test:
     name: Tests
@@ -54,9 +59,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    container:
-      image: elixir:1.9.1-alpine
-
     services:
       postgres:
         image: postgres:12-alpine
@@ -64,24 +66,27 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v1
-      - name: Install dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
-      - name: Download build artifacts
-        uses: actions/download-artifact@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1.2.0
         with:
-          name: _build
+          otp-version: 22.x
+          elixir-version: 1.9.x
+      - uses: actions/cache@v1
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
+      - uses: actions/cache@v1
+        with:
           path: _build
+          key: ${{ runner.os }}-build-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
       - name: Run tests
         run: mix coveralls.json
         env:
           DATABASE_URL: ecto://postgres@postgres/ecto_diff_test
-      - uses: codecov/codecov-action@v1.0.2
+      - uses: codecov/codecov-action@v1
         with:
           token: ${{secrets.CODECOV_TOKEN}}
+          fail_ci_if_error: true
 
   credo:
     name: Credo
@@ -90,21 +95,20 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    container:
-      image: elixir:1.9.1-alpine
-
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
-      - name: Download build artifacts
-        uses: actions/download-artifact@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1.2.0
         with:
-          name: _build
+          otp-version: 22.x
+          elixir-version: 1.9.x
+      - uses: actions/cache@v1
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
+      - uses: actions/cache@v1
+        with:
           path: _build
+          key: ${{ runner.os }}-build-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
       - name: Run credo
         run: mix credo --strict
 
@@ -113,18 +117,32 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    container:
-      image: elixir:1.9.1-alpine
-
     env:
       MIX_ENV: dev
 
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Dependencies
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-          mix deps.get
+      - uses: actions/checkout@v2
+      - uses: actions/setup-elixir@v1.2.0
+        with:
+          otp-version: 22.x
+          elixir-version: 1.9.x
+      - uses: actions/cache@v1
+        id: cache-build-dev
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-dev-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-dev-v3-
+      - uses: actions/cache@v1
+        with:
+          path: plts
+          key: ${{ runner.os }}-plts-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-plts-v3-
+      - name: Install dependencies
+        run: mix deps.get
+      - name: Compile
+        if: steps.cache-build-dev.outputs.cache-hit != 'true'
+        run: mix compile
       - name: Run dialyzer
-        run: mix dialyzer --halt-exit-status
+        run: mix dialyzer
