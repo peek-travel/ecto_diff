@@ -44,7 +44,7 @@ defmodule EctoDiff.MixProject do
   defp dialyzer do
     [
       plt_apps: [:compiler, :ecto, :elixir, :kernel, :stdlib],
-      plt_file: {:no_warn, "priv/plts/ecto_diff.plt"},
+      plt_file: {:no_warn, "plts/ecto_diff.plt"},
       flags: [:error_handling, :underspecs]
     ]
   end
