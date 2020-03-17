@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-elixir@v1.2.0
         with:
           otp-version: 22.x
-          elixir-version: 1.9.x
+          elixir-version: 1.10.x
       - uses: actions/cache@v1
         id: cache-mix
         with:
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/setup-elixir@v1.2.0
         with:
           otp-version: 22.x
-          elixir-version: 1.9.x
+          elixir-version: 1.10.x
       - uses: actions/cache@v1
         with:
           path: deps
@@ -68,15 +68,20 @@ jobs:
     services:
       postgres:
         image: postgres:12-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-elixir@v1.2.0
         with:
           otp-version: 22.x
-          elixir-version: 1.9.x
+          elixir-version: 1.10.x
       - uses: actions/cache@v1
         with:
           path: deps
@@ -88,7 +93,7 @@ jobs:
       - name: Run tests
         run: mix coveralls.json
         env:
-          DATABASE_URL: ecto://postgres@localhost/ecto_diff_test
+          DATABASE_URL: ecto://postgres:postgres@localhost/ecto_diff_test
       - uses: codecov/codecov-action@v1
         with:
           token: ${{secrets.CODECOV_TOKEN}}
@@ -106,7 +111,7 @@ jobs:
       - uses: actions/setup-elixir@v1.2.0
         with:
           otp-version: 22.x
-          elixir-version: 1.9.x
+          elixir-version: 1.10.x
       - uses: actions/cache@v1
         with:
           path: deps
@@ -131,7 +136,7 @@ jobs:
       - uses: actions/setup-elixir@v1.2.0
         with:
           otp-version: 22.x
-          elixir-version: 1.9.x
+          elixir-version: 1.10.x
       - uses: actions/cache@v1
         id: cache-build-dev
         with:
