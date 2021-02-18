@@ -80,7 +80,7 @@ defmodule EctoDiff.MixProject do
   defp deps do
     [
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.5", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.1.0", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.0", only: [:dev, :test]},
       {:ecto, "~> 3.0"},
       {:ex_doc, "~> 0.18", only: :dev, runtime: false},
