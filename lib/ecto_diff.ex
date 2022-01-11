@@ -305,10 +305,11 @@ defmodule EctoDiff do
 
     diffs =
       if primary_key_fields == [] do
-        max_lenght = max(length(previous), length(current))
+        from = max(length(previous), length(current)) - 1
 
-        Range.new(max_lenght - 1, 0)
-        |> Enum.map([], fn i ->
+        from
+        |> Range.new(0)
+        |> Enum.map(fn i ->
           prev_child = Enum.at(previous, i)
           current_child = Enum.at(current, i)
 
@@ -337,12 +338,12 @@ defmodule EctoDiff do
           do_diff(prev_child, current_child)
         end)
       end
-      |> Enum.reject(&no_changes?/1)
 
-    if diffs == [] do
-      acc
-    else
-      [{field, diffs} | acc]
+    diffs
+    |> Enum.reject(&no_changes?/1)
+    |> case do
+      [] -> acc
+      changed -> [{field, changed} | acc]
     end
   end
 
