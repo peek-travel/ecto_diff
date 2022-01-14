@@ -743,5 +743,149 @@ defmodule EctoDiffTest do
                }
              } = diff
     end
+
+    # Embeds Many Association without primary key
+
+    test "update with embeds_many while adding, shuffling and removing records without pk" do
+      {:ok, initial} =
+        %{shapes: [%{angles: 1}, %{angles: 2}]}
+        |> Box.new()
+        |> Repo.insert()
+
+      assert {:ok, :unchanged} = EctoDiff.diff(initial, initial)
+
+      {:ok, added} =
+        initial
+        |> Box.update(%{shapes: [%{angles: 1}, %{angles: 2}, %{angles: 3}]})
+        |> Repo.update()
+
+      assert {
+               :ok,
+               %EctoDiff{
+                 struct: Box,
+                 effect: :changed,
+                 changes: %{
+                   shapes: [
+                     %EctoDiff{
+                       struct: Shape,
+                       effect: :added,
+                       changes: %{angles: {nil, 3}}
+                     }
+                   ]
+                 }
+               }
+             } = EctoDiff.diff(initial, added)
+
+      {:ok, shuffled} =
+        added
+        |> Box.update(%{shapes: [%{angles: 3}, %{angles: 1}, %{angles: 2}]})
+        |> Repo.update()
+
+      assert {:ok,
+              %EctoDiff{
+                struct: Box,
+                effect: :changed,
+                changes: %{
+                  shapes: [
+                    %EctoDiff{
+                      struct: Shape,
+                      effect: :changed,
+                      changes: %{angles: {3, 2}}
+                    },
+                    %EctoDiff{
+                      struct: Shape,
+                      effect: :changed,
+                      changes: %{angles: {2, 1}}
+                    },
+                    %EctoDiff{
+                      struct: Shape,
+                      effect: :changed,
+                      changes: %{angles: {1, 3}}
+                    }
+                  ]
+                }
+              }} = EctoDiff.diff(added, shuffled)
+
+      {:ok, removed_first} =
+        added
+        |> Box.update(%{shapes: [%{angles: 2}, %{angles: 3}]})
+        |> Repo.update()
+
+      assert {
+               :ok,
+               %EctoDiff{
+                 struct: Box,
+                 effect: :changed,
+                 changes: %{
+                   shapes: [
+                     %EctoDiff{
+                       struct: Shape,
+                       effect: :deleted,
+                       changes: %{}
+                     },
+                     %EctoDiff{
+                       struct: Shape,
+                       effect: :changed,
+                       changes: %{angles: {2, 3}}
+                     },
+                     %EctoDiff{
+                       struct: Shape,
+                       effect: :changed,
+                       changes: %{angles: {1, 2}}
+                     }
+                   ]
+                 }
+               }
+             } = EctoDiff.diff(added, removed_first)
+
+      {:ok, removed_last} =
+        added
+        |> Box.update(%{shapes: [%{angles: 1}, %{angles: 2}]})
+        |> Repo.update()
+
+      assert {
+               :ok,
+               %EctoDiff{
+                 struct: Box,
+                 effect: :changed,
+                 changes: %{
+                   shapes: [
+                     %EctoDiff{
+                       struct: Shape,
+                       effect: :deleted,
+                       changes: %{}
+                     }
+                   ]
+                 }
+               }
+             } = EctoDiff.diff(added, removed_last)
+
+      {:ok, removed_middle} =
+        added
+        |> Box.update(%{shapes: [%{angles: 1}, %{angles: 3}]})
+        |> Repo.update()
+
+      assert {
+               :ok,
+               %EctoDiff{
+                 struct: Box,
+                 effect: :changed,
+                 changes: %{
+                   shapes: [
+                     %EctoDiff{
+                       struct: Shape,
+                       effect: :deleted,
+                       changes: %{}
+                     },
+                     %EctoDiff{
+                       struct: Shape,
+                       effect: :changed,
+                       changes: %{angles: {2, 3}}
+                     }
+                   ]
+                 }
+               }
+             } = EctoDiff.diff(added, removed_middle)
+    end
   end
 end
