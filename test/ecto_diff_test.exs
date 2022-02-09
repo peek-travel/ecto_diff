@@ -755,7 +755,10 @@ defmodule EctoDiffTest do
 
       assert get_in(diff, [:struct]) == EctoDiff.Pet
       assert get_in(diff, [:changes, :name, Access.elem(1)]) == "McFluffFace"
-      assert %{changes: %{name: {_, new_name}}} = put_in(create_diff, [:changes, :name, Access.elem(1)], "NewNameForKitty")
+
+      assert %{changes: %{name: {_, new_name}}} =
+               put_in(create_diff, [:changes, :name, Access.elem(1)], "NewNameForKitty")
+
       assert new_name == "NewNameForKitty"
     end
   end
