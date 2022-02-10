@@ -1,6 +1,6 @@
 defmodule EctoDiff do
   @moduledoc """
-  Generates a data structure describing the difference between two ecto structs.
+  Generates a data structure describing the difference between two Ecto structs.
 
   For details on how to generate an `t:EctoDiff.t/0` struct, see: `diff/2`.
 

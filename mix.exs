@@ -51,10 +51,15 @@ defmodule EctoDiff.MixProject do
 
   defp docs do
     [
-      main: "EctoDiff",
+      extras: [
+        "CHANGELOG.md": [],
+        "LICENSE.md": [title: "License"],
+        "README.md": [title: "Overview"]
+      ],
+      main: "readme",
       source_ref: @version,
       source_url: @source_url,
-      extras: ["README.md", "CHANGELOG.md", "LICENSE.md"]
+      formatters: ["html"]
     ]
   end
 

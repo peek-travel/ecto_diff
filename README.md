@@ -2,18 +2,19 @@
 
 [![CI Status](https://github.com/peek-travel/ecto_diff/workflows/CI/badge.svg)](https://github.com/peek-travel/ecto_diff/actions)
 [![codecov](https://codecov.io/gh/peek-travel/ecto_diff/branch/master/graph/badge.svg)](https://codecov.io/gh/peek-travel/ecto_diff)
-[![SourceLevel](https://app.sourcelevel.io/github/peek-travel/ecto_diff.svg)](https://app.sourcelevel.io/github/peek-travel/ecto_diff)
-[![Hex.pm Version](https://img.shields.io/hexpm/v/ecto_diff.svg?style=flat)](https://hex.pm/packages/ecto_diff)
-[![License](https://img.shields.io/hexpm/l/ecto_diff.svg)](LICENSE.md)
-[![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=peek-travel/ecto_diff)](https://dependabot.com)
+[![Module Version](https://img.shields.io/hexpm/v/ecto_diff.svg)](https://hex.pm/packages/ecto_diff)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/ecto_diff/)
+[![Total Download](https://img.shields.io/hexpm/dt/ecto_diff.svg)](https://hex.pm/packages/ecto_diff)
+[![License](https://img.shields.io/hexpm/l/ecto_diff.svg)](https://github.com/peek-travel/ecto_diff/blob/master/LICENSE.md)
+[![Last Updated](https://img.shields.io/github/last-commit/peek-travel/ecto_diff.svg)](https://github.com/peek-travel/ecto_diff/commits/master)
 
-Generates a data structure that describes the differences between two [ecto](https://github.com/elixir-ecto/ecto) structs.
+Generates a data structure that describes the differences between two [Ecto](https://github.com/elixir-ecto/ecto) structs.
 The primary use-case is to track what changed after calling `Repo.insert` or `Repo.update`, especially in conjunction
 with complex or deeply nested `cast_assoc` associations.
 
 ## Installation
 
-The package can be installed by adding `ecto_diff` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `:ecto_diff` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -136,3 +137,11 @@ iex> EctoDiff.diff(initial_pet, updated_pet)
 ```
 
 Detailed documentation can be found at [https://hexdocs.pm/ecto_diff](https://hexdocs.pm/ecto_diff).
+
+
+## Copyright and License
+
+Copyright (c) 2019 Peek Travel, Inc.
+
+This work is free. You can redistribute it and/or modify it under the
+terms of the MIT License. See the [LICENSE.md](./LICENSE.md) file for more details.
