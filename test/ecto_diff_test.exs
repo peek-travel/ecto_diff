@@ -744,4 +744,27 @@ defmodule EctoDiffTest do
              } = diff
     end
   end
+
+  describe "EctoDiff structs" do
+    test "can be traversed with Access behaviours" do
+      {:ok, pet} = %{name: "Spot", quotes: [%{quote: "Meow!"}, %{quote: "Nyan!"}]} |> Pet.new() |> Repo.insert()
+      {:ok, updated_pet} = pet |> Pet.update(%{name: "McFluffFace"}) |> Repo.update()
+
+      {:ok, create_diff} = EctoDiff.diff(nil, pet)
+      {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+
+      assert get_in(diff, [:struct]) == EctoDiff.Pet
+      assert get_in(diff, [:changes, :name, Access.elem(1)]) == "McFluffFace"
+
+      assert %{changes: %{name: {_, new_name}}} =
+               put_in(create_diff, [:changes, :name, Access.elem(1)], "NewNameForKitty")
+
+      assert new_name == "NewNameForKitty"
+
+      assert Access.pop(diff, :nonexistent_key) == {nil, diff}
+
+      assert {EctoDiff.Pet, updated_diff} = Access.pop(diff, :struct)
+      refute Map.has_key?(updated_diff, :struct)
+    end
+  end
 end

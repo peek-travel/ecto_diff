@@ -1,7 +1,7 @@
 defmodule EctoDiff.MixProject do
   use Mix.Project
 
-  @version "0.2.2"
+  @version "0.3.0"
   @source_url "https://github.com/peek-travel/ecto_diff"
 
   def project do
@@ -67,7 +67,7 @@ defmodule EctoDiff.MixProject do
   defp package do
     [
       files: ["lib", ".formatter.exs", "mix.exs", "README.md", "LICENSE.md", "CHANGELOG.md"],
-      maintainers: ["Chris Dosé <chris.dose@gmail.com>"],
+      maintainers: ["Peek Travel <noreply@peek.com>"],
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,

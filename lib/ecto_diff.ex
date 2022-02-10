@@ -7,6 +7,8 @@ defmodule EctoDiff do
   For details on what the generated struct looks like, see: `t:EctoDiff.t/0`.
   """
 
+  @behaviour Access
+
   alias Ecto.Association.NotLoaded
 
   @typedoc """
@@ -341,6 +343,15 @@ defmodule EctoDiff do
   defp no_changes?(_), do: false
 
   defp primary_key_nil?(key), do: Enum.all?(key, fn {_key, value} -> is_nil(value) end)
+
+  @impl Access
+  defdelegate fetch(diff, key), to: Map
+
+  @impl Access
+  defdelegate get_and_update(diff, key, update_fn), to: Map
+
+  @impl Access
+  defdelegate pop(diff, key), to: Map
 end
 
 defimpl Inspect, for: EctoDiff do

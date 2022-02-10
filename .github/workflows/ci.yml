@@ -4,6 +4,8 @@ on: push
 
 env:
   MIX_ENV: test
+  OTP_VERSION_SPEC: "24.2.1"
+  ELIXIR_VERSION_SPEC: "1.13.3"
 
 jobs:
   compile:
@@ -13,22 +15,23 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1.2.0
+      - uses: erlef/setup-beam@v1
+        id: setup
         with:
-          otp-version: 22.x
-          elixir-version: 1.10.x
-      - uses: actions/cache@v1
+          otp-version: ${{ env.OTP_VERSION_SPEC }}
+          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
+      - uses: actions/cache@v2
         id: cache-mix
         with:
           path: deps
           key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-mix-v5-
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
         id: cache-build
         with:
           path: _build
-          key: ${{ runner.os }}-build-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-build-v4-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-build-v3-
       - name: Install dependencies
@@ -47,11 +50,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1.2.0
+      - uses: erlef/setup-beam@v1
+        id: setup
         with:
-          otp-version: 22.x
-          elixir-version: 1.10.x
-      - uses: actions/cache@v1
+          otp-version: ${{ env.OTP_VERSION_SPEC }}
+          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
+      - uses: actions/cache@v2
         with:
           path: deps
           key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
@@ -78,23 +82,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1.2.0
+      - uses: erlef/setup-beam@v1
+        id: setup
         with:
-          otp-version: 22.x
-          elixir-version: 1.10.x
-      - uses: actions/cache@v1
+          otp-version: ${{ env.OTP_VERSION_SPEC }}
+          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
+      - uses: actions/cache@v2
         with:
           path: deps
           key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
         with:
           path: _build
-          key: ${{ runner.os }}-build-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-build-v4-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
       - name: Run tests
         run: mix coveralls.json
         env:
           DATABASE_URL: ecto://postgres:postgres@localhost/ecto_diff_test
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v2
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: true
@@ -108,18 +113,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1.2.0
+      - uses: erlef/setup-beam@v1
+        id: setup
         with:
-          otp-version: 22.x
-          elixir-version: 1.10.x
-      - uses: actions/cache@v1
+          otp-version: ${{ env.OTP_VERSION_SPEC }}
+          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
+      - uses: actions/cache@v2
         with:
           path: deps
           key: ${{ runner.os }}-mix-v5-${{ hashFiles('mix.lock') }}
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
         with:
           path: _build
-          key: ${{ runner.os }}-build-v3-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
+          key: ${{ runner.os }}-build-v4-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
       - name: Run credo
         run: mix credo --strict
 
@@ -133,18 +139,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1.2.0
+      - uses: erlef/setup-beam@v1
+        id: setup
         with:
-          otp-version: 22.x
-          elixir-version: 1.10.x
-      - uses: actions/cache@v1
+          otp-version: ${{ env.OTP_VERSION_SPEC }}
+          elixir-version: ${{ env.ELIXIR_VERSION_SPEC }}
+      - uses: actions/cache@v2
         id: cache-build-dev
         with:
           path: _build
           key: ${{ runner.os }}-build-dev-v4-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-build-dev-v4-
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
         with:
           path: plts
           key: ${{ runner.os }}-plts-v4-${{ hashFiles('lib/**/*.ex') }}${{ hashFiles('test/**/*.ex') }}${{ hashFiles('mix.lock') }}

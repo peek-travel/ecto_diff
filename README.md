@@ -29,6 +29,8 @@ To demonstrate the basic use-case for EctoDiff, let's look at a simple example. 
 like the following `Pet` with many `Skill`s. Importantly, we've chosen to `cast_assoc` the skills in the pet's changeset
 function, and we've opted to use `on_replace: :delete` on the has_many skills association.
 
+EctoDiff structs implement the Access behaviour for working with deeply-nested data.
+
 ```elixir
 defmodule Pet do
   use Ecto.Schema
