@@ -305,37 +305,47 @@ defmodule EctoDiff do
   defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc) do
     primary_key_fields = struct.__schema__(:primary_key)
 
-    if primary_key_fields == [],
-      do: raise("cannot determine difference in many association with no primary key for `#{struct}`")
-
-    {previous_map, keys} =
-      Enum.reduce(previous, {%{}, []}, fn x, {map, keys} ->
-        key = Map.take(x, primary_key_fields)
-        {Map.put(map, key, x), [key | keys]}
-      end)
-
-    {current_map, keys} =
-      Enum.reduce(current, {%{}, keys}, fn x, {map, keys} ->
-        key = Map.take(x, primary_key_fields)
-        {Map.put(map, key, x), [key | keys]}
-      end)
-
-    keys = keys |> Enum.reverse() |> Enum.uniq()
-
     diffs =
-      keys
-      |> Enum.map(fn key ->
-        prev_child = Map.get(previous_map, key)
-        current_child = Map.get(current_map, key)
+      if primary_key_fields == [] do
+        from = max(length(previous), length(current)) - 1
 
-        do_diff(prev_child, current_child)
-      end)
-      |> Enum.reject(&no_changes?/1)
+        from
+        |> Range.new(0)
+        |> Enum.map(fn i ->
+          prev_child = Enum.at(previous, i)
+          current_child = Enum.at(current, i)
 
-    if diffs == [] do
-      acc
-    else
-      [{field, diffs} | acc]
+          do_diff(prev_child, current_child)
+        end)
+      else
+        {previous_map, keys} =
+          Enum.reduce(previous, {%{}, []}, fn x, {map, keys} ->
+            key = Map.take(x, primary_key_fields)
+            {Map.put(map, key, x), [key | keys]}
+          end)
+
+        {current_map, keys} =
+          Enum.reduce(current, {%{}, keys}, fn x, {map, keys} ->
+            key = Map.take(x, primary_key_fields)
+            {Map.put(map, key, x), [key | keys]}
+          end)
+
+        keys
+        |> Enum.reverse()
+        |> Enum.uniq()
+        |> Enum.map(fn key ->
+          prev_child = Map.get(previous_map, key)
+          current_child = Map.get(current_map, key)
+
+          do_diff(prev_child, current_child)
+        end)
+      end
+
+    diffs
+    |> Enum.reject(&no_changes?/1)
+    |> case do
+      [] -> acc
+      changed -> [{field, changed} | acc]
     end
   end
 
