@@ -760,6 +760,11 @@ defmodule EctoDiffTest do
                put_in(create_diff, [:changes, :name, Access.elem(1)], "NewNameForKitty")
 
       assert new_name == "NewNameForKitty"
+
+      assert Access.pop(diff, :nonexistent_key) == {nil, diff}
+
+      assert {EctoDiff.Pet, updated_diff} = Access.pop(diff, :struct)
+      refute Map.has_key?(updated_diff, :struct)
     end
   end
 end
