@@ -52,6 +52,21 @@ defmodule EctoDiff do
           current: Ecto.Schema.t()
         }
 
+  @typedoc """
+  Configurable options for `diff/3`.
+
+  ## Options
+
+  * `:match_key` - A single atom or list of atoms which is used to compare
+    structs when the `:id` field is either unavailable or unsuitable for
+    comparison (e.g. can be used to compare structs with a user-provided key, for
+    instance). The key must exist on all structs to be compared. All structs which
+    lack the provided key(s) will be omitted from the final diff.
+  """
+  @type diff_opts :: [
+    match_key: atom | [atom] | :unset
+  ]
+
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
   @doc """
