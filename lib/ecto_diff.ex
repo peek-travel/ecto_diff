@@ -166,8 +166,16 @@ defmodule EctoDiff do
         >
   """
   @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil) :: {:ok, t()} | {:ok, :unchanged}
-  def diff(previous, current) do
-    diff = do_diff(previous, current)
+  def diff(previous, current), do: diff(previous, current, [])
+
+  @doc """
+  An alternate form of `diff/2` which allows options to be specified.
+
+  See `t:diff_opts/0` for available options.
+  """
+  @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil, diff_opts) :: {:ok, t()} | {:ok, :unchanged}
+  def diff(previous, current, opts) do
+    diff = do_diff(previous, current, opts)
 
     if no_changes?(diff) do
       {:ok, :unchanged}
@@ -176,14 +184,19 @@ defmodule EctoDiff do
     end
   end
 
-  defp do_diff(nil, %struct{} = current) do
+  defp do_diff(nil, %struct{} = current, opts) do
     previous = struct!(struct)
     diff = do_diff(previous, current)
     %{diff | effect: :added}
   end
 
-  defp do_diff(%struct{} = previous, nil) do
-    primary_key_fields = struct.__schema__(:primary_key)
+  defp do_diff(%struct{} = previous, nil, opts) do
+    primary_key_fields =
+      if opts[:match_key] == :unset do
+        struct.__schema__(:primary_key)
+      else
+        List.wrap(opts[:match_key])
+      end
 
     %__MODULE__{
       struct: struct,
@@ -195,15 +208,20 @@ defmodule EctoDiff do
     }
   end
 
-  defp do_diff(%struct{} = previous, %struct{} = current) do
-    primary_key_fields = struct.__schema__(:primary_key)
+  defp do_diff(%struct{} = previous, %struct{} = current, opts) do
+    primary_key_fields =
+      if opts[:match_key] == :unset do
+        struct.__schema__(:primary_key)
+      else
+        List.wrap(opts[:match_key])
+      end
 
     field_changes = fields(previous, current)
 
     changes =
       field_changes
-      |> Map.merge(associations(previous, current))
-      |> Map.merge(embeds(previous, current))
+      |> Map.merge(associations(previous, current, opts))
+      |> Map.merge(embeds(previous, current, opts))
 
     previous_primary_key = Map.take(previous, primary_key_fields)
     current_primary_key = Map.take(current, primary_key_fields)
@@ -245,7 +263,7 @@ defmodule EctoDiff do
     end
   end
 
-  defp embeds(%struct{} = previous, %struct{} = current) do
+  defp embeds(%struct{} = previous, %struct{} = current, opts) do
     embed_names = struct.__schema__(:embeds)
 
     embed_names
@@ -266,7 +284,7 @@ defmodule EctoDiff do
     end
   end
 
-  defp associations(%struct{} = previous, %struct{} = current) do
+  defp associations(%struct{} = previous, %struct{} = current, opts) do
     association_names = struct.__schema__(:associations)
 
     association_names
@@ -274,7 +292,7 @@ defmodule EctoDiff do
     |> Map.new()
   end
 
-  defp association(%struct{} = previous, %struct{} = current, association, acc) do
+  defp association(%struct{} = previous, %struct{} = current, association, acc, opts) do
     association_details = struct.__schema__(:association, association)
 
     previous_value = Map.get(previous, association)
@@ -283,31 +301,31 @@ defmodule EctoDiff do
     diff_association(previous_value, current_value, association_details, acc)
   end
 
-  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :one} = assoc, acc) do
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :one} = assoc, acc, opts) do
     diff_association(nil, nil, assoc, acc)
   end
 
-  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :many} = assoc, acc) do
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :many} = assoc, acc, opts) do
     diff_association([], [], assoc, acc)
   end
 
-  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc) do
+  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc, opts) do
     raise "previously loaded association `#{field}` not loaded in current struct"
   end
 
-  defp diff_association(%NotLoaded{}, current, %{cardinality: :one} = assoc, acc) do
+  defp diff_association(%NotLoaded{}, current, %{cardinality: :one} = assoc, acc, opts) do
     diff_association(nil, current, assoc, acc)
   end
 
-  defp diff_association(%NotLoaded{}, current, %{cardinality: :many} = assoc, acc) do
+  defp diff_association(%NotLoaded{}, current, %{cardinality: :many} = assoc, acc, opts) do
     diff_association([], current, assoc, acc)
   end
 
-  defp diff_association(nil, nil, %{cardinality: :one}, acc), do: acc
+  defp diff_association(nil, nil, %{cardinality: :one}, acc, opts), do: acc
 
-  defp diff_association([], [], %{cardinality: :many}, acc), do: acc
+  defp diff_association([], [], %{cardinality: :many}, acc, opts), do: acc
 
-  defp diff_association(previous, current, %{cardinality: :one, field: field}, acc) do
+  defp diff_association(previous, current, %{cardinality: :one, field: field}, acc, opts) do
     assoc_diff = do_diff(previous, current)
 
     if no_changes?(assoc_diff) do
@@ -317,7 +335,7 @@ defmodule EctoDiff do
     end
   end
 
-  defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc) do
+  defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc, opts) do
     primary_key_fields = struct.__schema__(:primary_key)
 
     if primary_key_fields == [],
