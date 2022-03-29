@@ -57,15 +57,32 @@ defmodule EctoDiff do
 
   ## Options
 
-  * `:match_key` - A single atom or list of atoms which is used to compare
-    structs when the `:id` field is either unavailable or unsuitable for
-    comparison (e.g. can be used to compare structs with a user-provided key, for
-    instance). The key must exist on all structs to be compared. All structs which
-    lack the provided key(s) will be omitted from the final diff.
+  * `:overrides` - A keyword list or map which provides a reference from a struct (to
+    be compared) to a key on that struct which will be used as the primary key for
+    comparison.
   """
   @type diff_opts :: [
-          primary_key: atom | [atom] | :unset
+          overrides: overrides
         ]
+
+  @typedoc """
+  A keyword list or a map which specifies a override from an Ecto schema to the desired
+  primary key, for use in comparing structs.
+
+  Structs that are not specified will be compared using their default primary key.
+
+  ## Examples:
+
+      [{Pet, :refid}, {Skill, :id}]
+
+  or
+
+      %{Skill: :refid, Owner: [:id, :refid]}
+  """
+  @type overrides :: [{Ecto.Schema.t(), primary_key}] | %{Ecto.Schema.t() => primary_key}
+
+  @typedoc "An atom or list of atoms used to define a simple or compound primary key"
+  @type primary_key :: atom | [atom]
 
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
@@ -186,17 +203,12 @@ defmodule EctoDiff do
 
   defp do_diff(nil, %struct{} = current, opts) do
     previous = struct!(struct)
-    diff = do_diff(previous, current)
+    diff = do_diff(previous, current, opts)
     %{diff | effect: :added}
   end
 
   defp do_diff(%struct{} = previous, nil, opts) do
-    primary_key_fields =
-      if opts[:match_key] == :unset do
-        struct.__schema__(:primary_key)
-      else
-        List.wrap(opts[:match_key])
-      end
+    primary_key_fields = get_primary_key_fields(struct, opts)
 
     %__MODULE__{
       struct: struct,
@@ -209,12 +221,7 @@ defmodule EctoDiff do
   end
 
   defp do_diff(%struct{} = previous, %struct{} = current, opts) do
-    primary_key_fields =
-      if opts[:match_key] == :unset do
-        struct.__schema__(:primary_key)
-      else
-        List.wrap(opts[:match_key])
-      end
+    primary_key_fields = get_primary_key_fields(struct, opts)
 
     field_changes = fields(previous, current)
 
@@ -267,11 +274,11 @@ defmodule EctoDiff do
     embed_names = struct.__schema__(:embeds)
 
     embed_names
-    |> Enum.reduce([], &embed(previous, current, &1, &2))
+    |> Enum.reduce([], &embed(previous, current, &1, &2, opts))
     |> Map.new()
   end
 
-  defp embed(%struct{} = previous, %struct{} = current, embed, acc) do
+  defp embed(%struct{} = previous, %struct{} = current, embed, acc, opts) do
     embed_details = struct.__schema__(:embed, embed)
 
     previous_embed = Map.get(previous, embed)
@@ -280,7 +287,7 @@ defmodule EctoDiff do
     if is_nil(previous_embed) && is_nil(current_embed) do
       acc
     else
-      diff_association(previous_embed, current_embed, embed_details, acc)
+      diff_association(previous_embed, current_embed, embed_details, acc, opts)
     end
   end
 
@@ -288,7 +295,7 @@ defmodule EctoDiff do
     association_names = struct.__schema__(:associations)
 
     association_names
-    |> Enum.reduce([], &association(previous, current, &1, &2))
+    |> Enum.reduce([], &association(previous, current, &1, &2, opts))
     |> Map.new()
   end
 
@@ -298,35 +305,35 @@ defmodule EctoDiff do
     previous_value = Map.get(previous, association)
     current_value = Map.get(current, association)
 
-    diff_association(previous_value, current_value, association_details, acc)
+    diff_association(previous_value, current_value, association_details, acc, opts)
   end
 
   defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :one} = assoc, acc, opts) do
-    diff_association(nil, nil, assoc, acc)
+    diff_association(nil, nil, assoc, acc, opts)
   end
 
   defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :many} = assoc, acc, opts) do
-    diff_association([], [], assoc, acc)
+    diff_association([], [], assoc, acc, opts)
   end
 
-  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc, opts) do
+  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc, _opts) do
     raise "previously loaded association `#{field}` not loaded in current struct"
   end
 
   defp diff_association(%NotLoaded{}, current, %{cardinality: :one} = assoc, acc, opts) do
-    diff_association(nil, current, assoc, acc)
+    diff_association(nil, current, assoc, acc, opts)
   end
 
   defp diff_association(%NotLoaded{}, current, %{cardinality: :many} = assoc, acc, opts) do
-    diff_association([], current, assoc, acc)
+    diff_association([], current, assoc, acc, opts)
   end
 
-  defp diff_association(nil, nil, %{cardinality: :one}, acc, opts), do: acc
+  defp diff_association(nil, nil, %{cardinality: :one}, acc, _opts), do: acc
 
-  defp diff_association([], [], %{cardinality: :many}, acc, opts), do: acc
+  defp diff_association([], [], %{cardinality: :many}, acc, _opts), do: acc
 
   defp diff_association(previous, current, %{cardinality: :one, field: field}, acc, opts) do
-    assoc_diff = do_diff(previous, current)
+    assoc_diff = do_diff(previous, current, opts)
 
     if no_changes?(assoc_diff) do
       acc
@@ -336,7 +343,7 @@ defmodule EctoDiff do
   end
 
   defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc, opts) do
-    primary_key_fields = struct.__schema__(:primary_key)
+    primary_key_fields = get_primary_key_fields(struct, opts)
 
     if primary_key_fields == [],
       do: raise("cannot determine difference in many association with no primary key for `#{struct}`")
@@ -361,7 +368,7 @@ defmodule EctoDiff do
         prev_child = Map.get(previous_map, key)
         current_child = Map.get(current_map, key)
 
-        do_diff(prev_child, current_child)
+        do_diff(prev_child, current_child, opts)
       end)
       |> Enum.reject(&no_changes?/1)
 
@@ -369,6 +376,15 @@ defmodule EctoDiff do
       acc
     else
       [{field, diffs} | acc]
+    end
+  end
+
+  defp get_primary_key_fields(struct, opts) do
+    overrides = Keyword.get(opts, :overrides, [])
+
+    case overrides[struct] do
+      nil -> struct.__schema__(:primary_key)
+      primary_key -> List.wrap(primary_key)
     end
   end
 
