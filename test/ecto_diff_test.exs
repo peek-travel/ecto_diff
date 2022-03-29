@@ -86,7 +86,12 @@ defmodule EctoDiffTest do
 
     test "insert with multiple association types" do
       {:ok, pet} =
-        %{name: "Spot", skills: [%{name: "Eating"}, %{name: "Sleeping"}], owner: %{name: "Samuel"}}
+        %{
+          name: "Spot",
+          skills: [%{name: "Eating"}, %{name: "Sleeping"}],
+          owner: %{name: "Samuel"},
+          details: %{description: "It's a kitty!"}
+        }
         |> Pet.new()
         |> Repo.insert()
 
@@ -97,7 +102,8 @@ defmodule EctoDiffTest do
           %{id: eating_id, refid: eating_refid},
           %{id: sleeping_id, refid: sleeping_refid}
         ],
-        owner: %{id: owner_id, refid: owner_refid}
+        owner: %{id: owner_id, refid: owner_refid},
+        details: %{description: description, id: detail_id}
       } = pet
 
       {:ok, diff} = EctoDiff.diff(nil, pet, overrides: %{Pet => :refid, Skill => :refid})
@@ -139,32 +145,13 @@ defmodule EctoDiffTest do
                        refid: {nil, ^sleeping_refid}
                      }
                    }
-                 ]
-               }
-             } = diff
-    end
-
-    test "insert with embeds_one" do
-      {:ok, pet} = %{name: "Spot", details: %{description: "It's a kitty!"}} |> Pet.new() |> Repo.insert()
-      id = pet.id
-      refid = pet.refid
-      details_id = pet.details.id
-
-      {:ok, diff} = EctoDiff.diff(nil, pet, overrides: [{Pet, :refid}])
-
-      assert %EctoDiff{
-               effect: :added,
-               primary_key: %{refid: ^refid},
-               changes: %{
-                 id: {nil, ^id},
-                 name: {nil, "Spot"},
-                 refid: {nil, ^refid},
+                 ],
                  details: %EctoDiff{
                    effect: :added,
-                   primary_key: %{id: ^details_id},
+                   primary_key: %{id: ^detail_id},
                    changes: %{
-                     id: {nil, ^details_id},
-                     description: {nil, "It's a kitty!"}
+                     id: {nil, ^detail_id},
+                     description: {nil, ^description}
                    }
                  }
                }
