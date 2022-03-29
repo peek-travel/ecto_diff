@@ -743,6 +743,61 @@ defmodule EctoDiffTest do
                }
              } = diff
     end
+
+    test "using match_key option" do
+      {:ok, pet} =
+        %{
+          refid: "spot",
+          name: "Spot",
+          quotes: [%{refid: "meow", quote: "Meow!"}, %{refid: "nyan", quote: "Nyan!"}, %{refid: "myaw", quote: "Myaw?"}]
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      [quote1, quote2, _quote3] = pet.quotes
+
+      {:ok, updated_pet} =
+        pet
+        |> Pet.update(%{
+          quotes: [
+            %{id: quote1.id},
+            %{id: quote2.id, refid: "nyan", quote: "Nyaaaan!"},
+            %{refid: "hello", quote: "Hello!"}
+          ]
+        })
+        |> Repo.update()
+
+      {:ok, diff} = EctoDiff.diff(pet, updated_pet, match_key: :refid)
+
+      assert %EctoDiff{
+               effect: :changed,
+               primary_key: %{refid: "spot"},
+               changes: %{
+                 quotes: [
+                   %EctoDiff{
+                     effect: :changed,
+                     primary_key: %{refid: "nyan"},
+                     changes: %{
+                       quote: {"Nyan!", "Nyaaaan!"}
+                     }
+                   },
+                   %EctoDiff{
+                     effect: :deleted,
+                     primary_key: %{refid: "myaw"},
+                     changes: %{}
+                   },
+                   %EctoDiff{
+                     effect: :added,
+                     primary_key: %{refid: "hello"},
+                     changes: %{
+                       refid: {nil, "hello"},
+                       quote: {nil, "Hello!"}
+                     }
+                   }
+                 ]
+               }
+             } = diff
+    end
   end
 
   describe "EctoDiff structs" do

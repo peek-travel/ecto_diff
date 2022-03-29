@@ -5,6 +5,7 @@ defmodule EctoDiff.Pet do
   import Ecto.Changeset
 
   schema("pets") do
+    field :refid, :string
     field :name, :string
     field :type, :string, default: "Cat"
 
@@ -19,7 +20,7 @@ defmodule EctoDiff.Pet do
 
   defp changeset(struct, params) do
     struct
-    |> cast(params, [:name, :type])
+    |> cast(params, [:name, :type, :refid])
     |> cast_assoc(:owner)
     |> cast_assoc(:skills)
     |> cast_embed(:details)

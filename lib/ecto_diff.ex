@@ -64,8 +64,8 @@ defmodule EctoDiff do
     lack the provided key(s) will be omitted from the final diff.
   """
   @type diff_opts :: [
-    match_key: atom | [atom] | :unset
-  ]
+          match_key: atom | [atom]
+        ]
 
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
@@ -73,6 +73,8 @@ defmodule EctoDiff do
   Returns an `t:EctoDiff.t/0` describing the difference between two given ecto structs.
 
   The "previous" struct can be `nil`, to represent an insert operation.
+
+  See `t:diff_opts/0` for available options.
 
   ## Examples
 
@@ -164,18 +166,13 @@ defmodule EctoDiff do
             ]
           }
         >
-  """
-  @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil) :: {:ok, t()} | {:ok, :unchanged}
-  def diff(previous, current), do: diff(previous, current, [])
 
-  @doc """
-  An alternate form of `diff/2` which allows options to be specified.
-
-  See `t:diff_opts/0` for available options.
   """
+
   @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil, diff_opts) :: {:ok, t()} | {:ok, :unchanged}
-  def diff(previous, current, opts) do
-    diff = do_diff(previous, current, opts)
+  def diff(previous, current, opts \\ []) do
+    match_key = Keyword.get(opts, :match_key)
+    diff = do_diff(previous, current, match_key)
 
     if no_changes?(diff) do
       {:ok, :unchanged}
@@ -184,19 +181,14 @@ defmodule EctoDiff do
     end
   end
 
-  defp do_diff(nil, %struct{} = current, opts) do
+  defp do_diff(nil, %struct{} = current, match_key) do
     previous = struct!(struct)
-    diff = do_diff(previous, current)
+    diff = do_diff(previous, current, match_key)
     %{diff | effect: :added}
   end
 
-  defp do_diff(%struct{} = previous, nil, opts) do
-    primary_key_fields =
-      if opts[:match_key] == :unset do
-        struct.__schema__(:primary_key)
-      else
-        List.wrap(opts[:match_key])
-      end
+  defp do_diff(%struct{} = previous, nil, match_key) do
+    primary_key_fields = get_primary_key_fields(struct, match_key)
 
     %__MODULE__{
       struct: struct,
@@ -208,20 +200,14 @@ defmodule EctoDiff do
     }
   end
 
-  defp do_diff(%struct{} = previous, %struct{} = current, opts) do
-    primary_key_fields =
-      if opts[:match_key] == :unset do
-        struct.__schema__(:primary_key)
-      else
-        List.wrap(opts[:match_key])
-      end
-
+  defp do_diff(%struct{} = previous, %struct{} = current, match_key) do
+    primary_key_fields = get_primary_key_fields(struct, match_key)
     field_changes = fields(previous, current)
 
     changes =
       field_changes
-      |> Map.merge(associations(previous, current, opts))
-      |> Map.merge(embeds(previous, current, opts))
+      |> Map.merge(associations(previous, current, match_key))
+      |> Map.merge(embeds(previous, current, match_key))
 
     previous_primary_key = Map.take(previous, primary_key_fields)
     current_primary_key = Map.take(current, primary_key_fields)
@@ -244,6 +230,14 @@ defmodule EctoDiff do
     }
   end
 
+  defp get_primary_key_fields(struct, match_key) when is_nil(match_key) do
+    struct.__schema__(:primary_key)
+  end
+
+  defp get_primary_key_fields(_struct, match_key) do
+    List.wrap(match_key)
+  end
+
   defp fields(%struct{} = previous, %struct{} = current) do
     field_names = struct.__schema__(:fields) -- struct.__schema__(:embeds)
 
@@ -263,15 +257,15 @@ defmodule EctoDiff do
     end
   end
 
-  defp embeds(%struct{} = previous, %struct{} = current, opts) do
+  defp embeds(%struct{} = previous, %struct{} = current, match_key) do
     embed_names = struct.__schema__(:embeds)
 
     embed_names
-    |> Enum.reduce([], &embed(previous, current, &1, &2))
+    |> Enum.reduce([], &embed(previous, current, match_key, &1, &2))
     |> Map.new()
   end
 
-  defp embed(%struct{} = previous, %struct{} = current, embed, acc) do
+  defp embed(%struct{} = previous, %struct{} = current, match_key, embed, acc) do
     embed_details = struct.__schema__(:embed, embed)
 
     previous_embed = Map.get(previous, embed)
@@ -280,53 +274,53 @@ defmodule EctoDiff do
     if is_nil(previous_embed) && is_nil(current_embed) do
       acc
     else
-      diff_association(previous_embed, current_embed, embed_details, acc)
+      diff_association(previous_embed, current_embed, match_key, embed_details, acc)
     end
   end
 
-  defp associations(%struct{} = previous, %struct{} = current, opts) do
+  defp associations(%struct{} = previous, %struct{} = current, match_key) do
     association_names = struct.__schema__(:associations)
 
     association_names
-    |> Enum.reduce([], &association(previous, current, &1, &2))
+    |> Enum.reduce([], &association(previous, current, match_key, &1, &2))
     |> Map.new()
   end
 
-  defp association(%struct{} = previous, %struct{} = current, association, acc, opts) do
+  defp association(%struct{} = previous, %struct{} = current, match_key, association, acc) do
     association_details = struct.__schema__(:association, association)
 
     previous_value = Map.get(previous, association)
     current_value = Map.get(current, association)
 
-    diff_association(previous_value, current_value, association_details, acc)
+    diff_association(previous_value, current_value, match_key, association_details, acc)
   end
 
-  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :one} = assoc, acc, opts) do
-    diff_association(nil, nil, assoc, acc)
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, match_key, %{cardinality: :one} = assoc, acc) do
+    diff_association(nil, nil, match_key, assoc, acc)
   end
 
-  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :many} = assoc, acc, opts) do
-    diff_association([], [], assoc, acc)
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, match_key, %{cardinality: :many} = assoc, acc) do
+    diff_association([], [], match_key, assoc, acc)
   end
 
-  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc, opts) do
+  defp diff_association(_previous, %NotLoaded{}, _match_key, %{field: field}, _acc) do
     raise "previously loaded association `#{field}` not loaded in current struct"
   end
 
-  defp diff_association(%NotLoaded{}, current, %{cardinality: :one} = assoc, acc, opts) do
-    diff_association(nil, current, assoc, acc)
+  defp diff_association(%NotLoaded{}, current, match_key, %{cardinality: :one} = assoc, acc) do
+    diff_association(nil, current, match_key, assoc, acc)
   end
 
-  defp diff_association(%NotLoaded{}, current, %{cardinality: :many} = assoc, acc, opts) do
-    diff_association([], current, assoc, acc)
+  defp diff_association(%NotLoaded{}, current, match_key, %{cardinality: :many} = assoc, acc) do
+    diff_association([], current, match_key, assoc, acc)
   end
 
-  defp diff_association(nil, nil, %{cardinality: :one}, acc, opts), do: acc
+  defp diff_association(nil, nil, _match_key, %{cardinality: :one}, acc), do: acc
 
-  defp diff_association([], [], %{cardinality: :many}, acc, opts), do: acc
+  defp diff_association([], [], _match_key, %{cardinality: :many}, acc), do: acc
 
-  defp diff_association(previous, current, %{cardinality: :one, field: field}, acc, opts) do
-    assoc_diff = do_diff(previous, current)
+  defp diff_association(previous, current, match_key, %{cardinality: :one, field: field}, acc) do
+    assoc_diff = do_diff(previous, current, match_key)
 
     if no_changes?(assoc_diff) do
       acc
@@ -335,8 +329,8 @@ defmodule EctoDiff do
     end
   end
 
-  defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc, opts) do
-    primary_key_fields = struct.__schema__(:primary_key)
+  defp diff_association(previous, current, match_key, %{cardinality: :many, field: field, related: struct}, acc) do
+    primary_key_fields = get_primary_key_fields(struct, match_key)
 
     if primary_key_fields == [],
       do: raise("cannot determine difference in many association with no primary key for `#{struct}`")
@@ -361,7 +355,7 @@ defmodule EctoDiff do
         prev_child = Map.get(previous_map, key)
         current_child = Map.get(current_map, key)
 
-        do_diff(prev_child, current_child)
+        do_diff(prev_child, current_child, match_key)
       end)
       |> Enum.reject(&no_changes?/1)
 

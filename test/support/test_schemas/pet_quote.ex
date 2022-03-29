@@ -5,8 +5,9 @@ defmodule EctoDiff.PetQuote do
   import Ecto.Changeset
 
   embedded_schema do
+    field :refid, :string
     field :quote, :string
   end
 
-  def changeset(struct, params), do: cast(struct, params, [:quote])
+  def changeset(struct, params), do: cast(struct, params, [:quote, :refid])
 end
