@@ -1,7 +1,7 @@
 defmodule EctoDiff.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.4.0"
   @source_url "https://github.com/peek-travel/ecto_diff"
 
   def project do
@@ -54,6 +54,7 @@ defmodule EctoDiff.MixProject do
       main: "EctoDiff",
       source_ref: @version,
       source_url: @source_url,
+      main: ["readme"],
       extras: ["README.md", "CHANGELOG.md", "LICENSE.md"]
     ]
   end
@@ -80,11 +81,11 @@ defmodule EctoDiff.MixProject do
   defp deps do
     [
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.5", only: [:dev, :test], runtime: false},
-      {:ecto_sql, "~> 3.0", only: [:dev, :test]},
-      {:ecto, "~> 3.0"},
-      {:ex_doc, "~> 0.18", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.10", only: :test},
+      {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
+      {:ecto_sql, "~> 3.7", only: [:dev, :test]},
+      {:ecto, "~> 3.7"},
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:excoveralls, "~> 0.14", only: :test},
       {:jason, ">= 1.0.0", only: [:dev, :test]},
       {:postgrex, ">= 0.0.0", only: [:dev, :test]}
     ]
