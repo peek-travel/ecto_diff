@@ -45,8 +45,8 @@ defmodule EctoDiff do
   """
   @type t :: %__MODULE__{
           struct: atom(),
-          primary_key: %{required(atom()) => any()},
-          changes: %{required(atom()) => any()},
+          primary_key: %{required(primary_key) => any()},
+          changes: %{required(struct_field) => any()},
           effect: effect(),
           previous: Ecto.Schema.t(),
           current: Ecto.Schema.t()
@@ -77,12 +77,19 @@ defmodule EctoDiff do
 
   or
 
-      %{Skill: :refid, Owner: [:id, :refid]}
+      %{Skill => :refid, Owner => [:id, :refid]}
   """
   @type overrides :: [{Ecto.Schema.t(), primary_key}] | %{Ecto.Schema.t() => primary_key}
 
-  @typedoc "An atom or list of atoms used to define a simple or compound primary key"
+  @typedoc """
+  An atom or list of atoms used to define a simple or compound primary key.
+  """
   @type primary_key :: atom | [atom]
+
+  @typedoc """
+  A field defined on a struct.
+  """
+  @type struct_field :: atom
 
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
