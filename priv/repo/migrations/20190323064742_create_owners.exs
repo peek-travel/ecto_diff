@@ -4,6 +4,7 @@ defmodule EctoDiff.Repo.Migrations.CreateOwners do
   def change do
     create table(:owners) do
       add :name, :string
+      add :refid, :uuid
     end
 
     alter table(:pets) do

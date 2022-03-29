@@ -7,6 +7,7 @@ defmodule EctoDiff.Skill do
   schema("skills") do
     field :name, :string
     field :level, :integer, default: 1
+    field :refid, Ecto.UUID, autogenerate: true
 
     belongs_to :pet, EctoDiff.Pet
   end

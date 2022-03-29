@@ -6,6 +6,7 @@ defmodule EctoDiff.Owner do
 
   schema("owners") do
     field :name, :string
+    field :refid, Ecto.UUID, autogenerate: true
   end
 
   def changeset(struct, params), do: cast(struct, params, [:name])
