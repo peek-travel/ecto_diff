@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :ecto_diff, ecto_repos: [EctoDiff.Repo]
 
