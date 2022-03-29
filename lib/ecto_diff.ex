@@ -57,16 +57,16 @@ defmodule EctoDiff do
 
   ## Options
 
-  * `:overrides` - A keyword list or map which provides a reference from a struct (to
-    be compared) to a key on that struct which will be used as the primary key for
-    comparison.
+  * `:overrides` - A keyword list or map which provides a reference from a struct
+    to a key (or list of keys) on that struct which will be used as the primary key
+    (simple or composite) for diffing.
   """
   @type diff_opts :: [
           overrides: overrides
         ]
 
   @typedoc """
-  A keyword list or a map which specifies a override from an Ecto schema to the desired
+  A keyword list or a map which specifies an override from an Ecto schema to the desired
   primary key, for use in comparing structs.
 
   Structs that are not specified will be compared using their default primary key.
