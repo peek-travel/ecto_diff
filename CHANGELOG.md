@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Nothing yet
 
+## [0.4.0][]
+
+- Added `EctoDiff.diff/3` to allow options to be specified when performing a diff.
+- Added `:overrides` as an option for diffing. This option allows specification of an alternate primary key for a specific struct in a diff. Unspecified structs will use their default primary key.
+
 ## [0.3.0][] - 2022-02-09
 
 ### Added
@@ -49,7 +54,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Initial release
 
-[Unreleased]: https://github.com/peek-travel/ecto_diff/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/peek-travel/ecto_diff/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/peek-travel/ecto_diff/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/peek-travel/ecto_diff/compare/0.2.2...0.3.0
 [0.2.2]: https://github.com/peek-travel/ecto_diff/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/peek-travel/ecto_diff/compare/0.2.0...0.2.1
