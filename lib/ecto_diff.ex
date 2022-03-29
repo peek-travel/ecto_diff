@@ -409,8 +409,23 @@ defmodule EctoDiff do
 
     case overrides[struct] do
       nil -> struct.__schema__(:primary_key)
-      primary_key -> List.wrap(primary_key)
+      keys -> validate_keys!(struct, List.wrap(keys))
     end
+  end
+
+  defp validate_keys!(struct, []) do
+    raise "no keys specified in override for #{inspect(struct)}"
+  end
+
+  defp validate_keys!(struct, keys) do
+    struct_fields = struct.__schema__(:fields) || []
+    missing = Enum.filter(keys, &(&1 not in struct_fields))
+
+    if missing != [] do
+      raise "the keys #{inspect(missing)} for #{inspect(struct)} are invalid or missing"
+    end
+
+    keys
   end
 
   defp no_changes?(%{effect: :changed, changes: map}) when map == %{}, do: true
