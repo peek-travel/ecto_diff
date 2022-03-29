@@ -11,8 +11,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [0.4.0][]
 
+### Added
+
 - Added `EctoDiff.diff/3` to allow options to be specified when performing a diff.
 - Added `:overrides` as an option for diffing. This option allows specification of an alternate primary key for a specific struct in a diff. Unspecified structs will use their default primary key.
+
+### Updated
+
+- Dependencies:
+
+  - credo 1.6.3 => 1.6.4
+  - db_connection 2.4.1 => 2.4.2
+  - dialyzer 1.0.0-rc.5 => 1.1.0
+  - earmark_parser 1.4.19 => 1.4.25
+  - ecto 3.7.1 => 3.7.2
+  - ex_doc 0.28.0 => 0.28.3
+  - makeup 1.0.5 => 1.1.0
+  - makeup_elixir 0.15.2 => 0.16.0 (minor)
+  - nimble_parsec 1.2.1 => 1.2.3
+  - postgrex 0.16.1 => 0.16.2
 
 ## [0.3.0][] - 2022-02-09
 
