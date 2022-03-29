@@ -14,8 +14,8 @@ defmodule EctoDiff do
   @typedoc """
   The type of change for a given struct.
 
-  Each `t:EctoDiff.t/0` struct will have a field describing what happened to the given ecto struct. The values can be one of
-  the following:
+  Each `t:EctoDiff.t/0` struct will have a field describing what happened to the given Ecto schema struct.
+  The values can be one of the following:
 
   * `:added` - This struct is new and was not present previously. This happens when the primary struct, or an associated
                struct, was added during an update or insert.
@@ -45,7 +45,7 @@ defmodule EctoDiff do
   """
   @type t :: %__MODULE__{
           struct: atom(),
-          primary_key: %{required(primary_key) => any()},
+          primary_key: %{required(struct_field) => any()},
           changes: %{required(struct_field) => any()},
           effect: effect(),
           previous: Ecto.Schema.t(),
@@ -82,9 +82,9 @@ defmodule EctoDiff do
   @type overrides :: [{Ecto.Schema.t(), primary_key}] | %{Ecto.Schema.t() => primary_key}
 
   @typedoc """
-  An atom or list of atoms used to define a simple or compound primary key.
+  A struct field or list of fields used to define a simple or composite primary key.
   """
-  @type primary_key :: atom | [atom]
+  @type primary_key :: struct_field | [struct_field]
 
   @typedoc """
   A field defined on a struct.
@@ -186,6 +186,24 @@ defmodule EctoDiff do
                 }
               >
             ]
+          }
+        >
+
+    Using an override to specify a composite primary key:
+
+        iex> {:ok, pet} = %{name: "Spot", type: "Calico"} |> Pet.new() |> Repo.insert()
+        iex> {:ok, diff} = EctoDiff.diff(nil, pet, overrides: %{Pet => [:name, :type]})
+        iex> diff
+        #EctoDiff<
+          struct: Pet,
+          primary_key: %{name: "Spot", type: "Calico"},
+          effect: :added,
+          previous: #Pet<>,
+          current: #Pet<>,
+          changes: %{
+            id: {nil, 1},
+            name: {nil, "Spot"},
+            type: {"Cat", "Calico"}
           }
         >
   """
