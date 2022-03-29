@@ -157,6 +157,18 @@ defmodule EctoDiffTest do
                }
              } = diff
     end
+
+    test "raises when invalid override keys are specified" do
+      {:ok, pet} = %{name: "Spot", skills: [%{name: "Karate", level: 6}]} |> Pet.new() |> Repo.insert()
+
+      assert_raise RuntimeError, "the keys [:badkey] for EctoDiff.Skill are invalid or missing", fn ->
+        {:ok, _diff} = EctoDiff.diff(nil, pet, overrides: %{Skill => [:name, :badkey]})
+      end
+
+      assert_raise RuntimeError, "no keys specified in override for EctoDiff.Skill", fn ->
+        {:ok, _diff} = EctoDiff.diff(nil, pet, overrides: %{Skill => []})
+      end
+    end
   end
 
   describe "diff/2" do
