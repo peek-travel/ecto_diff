@@ -79,7 +79,7 @@ defmodule EctoDiff do
 
       %{Skill => :refid, Owner => [:id, :refid]}
   """
-  @type overrides :: [{Ecto.Schema.t(), primary_key}] | %{Ecto.Schema.t() => primary_key}
+  @type overrides :: [{module, primary_key}] | %{module => primary_key}
 
   @typedoc """
   A struct field or list of fields used to define a simple or composite primary key.
