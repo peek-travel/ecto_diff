@@ -14,8 +14,8 @@ defmodule EctoDiff do
   @typedoc """
   The type of change for a given struct.
 
-  Each `t:EctoDiff.t/0` struct will have a field describing what happened to the given ecto struct. The values can be one of
-  the following:
+  Each `t:EctoDiff.t/0` struct will have a field describing what happened to the given Ecto schema struct.
+  The values can be one of the following:
 
   * `:added` - This struct is new and was not present previously. This happens when the primary struct, or an associated
                struct, was added during an update or insert.
@@ -45,12 +45,51 @@ defmodule EctoDiff do
   """
   @type t :: %__MODULE__{
           struct: atom(),
-          primary_key: %{required(atom()) => any()},
-          changes: %{required(atom()) => any()},
+          primary_key: %{required(struct_field) => any()},
+          changes: %{required(struct_field) => any()},
           effect: effect(),
           previous: Ecto.Schema.t(),
           current: Ecto.Schema.t()
         }
+
+  @typedoc """
+  Configurable options for `diff/3`.
+
+  ## Options
+
+  * `:overrides` - A keyword list or map which provides a reference from a struct
+    to a key (or list of keys) on that struct which will be used as the primary key
+    (simple or composite) for diffing.
+  """
+  @type diff_opts :: [
+          overrides: overrides
+        ]
+
+  @typedoc """
+  A keyword list or a map which specifies an override from an Ecto schema to the desired
+  primary key, for use in comparing structs.
+
+  Structs that are not specified will be compared using their default primary key.
+
+  ## Examples:
+
+      [{Pet, :refid}, {Skill, :id}]
+
+  or
+
+      %{Skill => :refid, Owner => [:id, :refid]}
+  """
+  @type overrides :: [{module, primary_key}] | %{module => primary_key}
+
+  @typedoc """
+  A struct field or list of fields used to define a simple or composite primary key.
+  """
+  @type primary_key :: struct_field | [struct_field]
+
+  @typedoc """
+  A field defined on a struct.
+  """
+  @type struct_field :: atom
 
   defstruct [:struct, :primary_key, :changes, :effect, :previous, :current]
 
@@ -149,10 +188,36 @@ defmodule EctoDiff do
             ]
           }
         >
+
+    Using an override to specify a composite primary key:
+
+        iex> {:ok, pet} = %{name: "Spot", type: "Calico"} |> Pet.new() |> Repo.insert()
+        iex> {:ok, diff} = EctoDiff.diff(nil, pet, overrides: %{Pet => [:name, :type]})
+        iex> diff
+        #EctoDiff<
+          struct: Pet,
+          primary_key: %{name: "Spot", type: "Calico"},
+          effect: :added,
+          previous: #Pet<>,
+          current: #Pet<>,
+          changes: %{
+            id: {nil, 1},
+            name: {nil, "Spot"},
+            type: {"Cat", "Calico"}
+          }
+        >
   """
   @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil) :: {:ok, t()} | {:ok, :unchanged}
-  def diff(previous, current) do
-    diff = do_diff(previous, current)
+  def diff(previous, current), do: diff(previous, current, [])
+
+  @doc """
+  An alternate form of `diff/2` which allows options to be specified.
+
+  See `t:diff_opts/0` for available options.
+  """
+  @spec diff(Ecto.Schema.t() | nil, Ecto.Schema.t() | nil, diff_opts) :: {:ok, t()} | {:ok, :unchanged}
+  def diff(previous, current, opts) do
+    diff = do_diff(previous, current, opts)
 
     if no_changes?(diff) do
       {:ok, :unchanged}
@@ -161,14 +226,14 @@ defmodule EctoDiff do
     end
   end
 
-  defp do_diff(nil, %struct{} = current) do
+  defp do_diff(nil, %struct{} = current, opts) do
     previous = struct!(struct)
-    diff = do_diff(previous, current)
+    diff = do_diff(previous, current, opts)
     %{diff | effect: :added}
   end
 
-  defp do_diff(%struct{} = previous, nil) do
-    primary_key_fields = struct.__schema__(:primary_key)
+  defp do_diff(%struct{} = previous, nil, opts) do
+    primary_key_fields = get_primary_key_fields(struct, opts)
 
     %__MODULE__{
       struct: struct,
@@ -180,15 +245,15 @@ defmodule EctoDiff do
     }
   end
 
-  defp do_diff(%struct{} = previous, %struct{} = current) do
-    primary_key_fields = struct.__schema__(:primary_key)
+  defp do_diff(%struct{} = previous, %struct{} = current, opts) do
+    primary_key_fields = get_primary_key_fields(struct, opts)
 
     field_changes = fields(previous, current)
 
     changes =
       field_changes
-      |> Map.merge(associations(previous, current))
-      |> Map.merge(embeds(previous, current))
+      |> Map.merge(associations(previous, current, opts))
+      |> Map.merge(embeds(previous, current, opts))
 
     previous_primary_key = Map.take(previous, primary_key_fields)
     current_primary_key = Map.take(current, primary_key_fields)
@@ -230,15 +295,15 @@ defmodule EctoDiff do
     end
   end
 
-  defp embeds(%struct{} = previous, %struct{} = current) do
+  defp embeds(%struct{} = previous, %struct{} = current, opts) do
     embed_names = struct.__schema__(:embeds)
 
     embed_names
-    |> Enum.reduce([], &embed(previous, current, &1, &2))
+    |> Enum.reduce([], &embed(previous, current, &1, &2, opts))
     |> Map.new()
   end
 
-  defp embed(%struct{} = previous, %struct{} = current, embed, acc) do
+  defp embed(%struct{} = previous, %struct{} = current, embed, acc, opts) do
     embed_details = struct.__schema__(:embed, embed)
 
     previous_embed = Map.get(previous, embed)
@@ -247,53 +312,53 @@ defmodule EctoDiff do
     if is_nil(previous_embed) && is_nil(current_embed) do
       acc
     else
-      diff_association(previous_embed, current_embed, embed_details, acc)
+      diff_association(previous_embed, current_embed, embed_details, acc, opts)
     end
   end
 
-  defp associations(%struct{} = previous, %struct{} = current) do
+  defp associations(%struct{} = previous, %struct{} = current, opts) do
     association_names = struct.__schema__(:associations)
 
     association_names
-    |> Enum.reduce([], &association(previous, current, &1, &2))
+    |> Enum.reduce([], &association(previous, current, &1, &2, opts))
     |> Map.new()
   end
 
-  defp association(%struct{} = previous, %struct{} = current, association, acc) do
+  defp association(%struct{} = previous, %struct{} = current, association, acc, opts) do
     association_details = struct.__schema__(:association, association)
 
     previous_value = Map.get(previous, association)
     current_value = Map.get(current, association)
 
-    diff_association(previous_value, current_value, association_details, acc)
+    diff_association(previous_value, current_value, association_details, acc, opts)
   end
 
-  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :one} = assoc, acc) do
-    diff_association(nil, nil, assoc, acc)
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :one} = assoc, acc, opts) do
+    diff_association(nil, nil, assoc, acc, opts)
   end
 
-  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :many} = assoc, acc) do
-    diff_association([], [], assoc, acc)
+  defp diff_association(%NotLoaded{}, %NotLoaded{}, %{cardinality: :many} = assoc, acc, opts) do
+    diff_association([], [], assoc, acc, opts)
   end
 
-  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc) do
+  defp diff_association(_previous, %NotLoaded{}, %{field: field}, _acc, _opts) do
     raise "previously loaded association `#{field}` not loaded in current struct"
   end
 
-  defp diff_association(%NotLoaded{}, current, %{cardinality: :one} = assoc, acc) do
-    diff_association(nil, current, assoc, acc)
+  defp diff_association(%NotLoaded{}, current, %{cardinality: :one} = assoc, acc, opts) do
+    diff_association(nil, current, assoc, acc, opts)
   end
 
-  defp diff_association(%NotLoaded{}, current, %{cardinality: :many} = assoc, acc) do
-    diff_association([], current, assoc, acc)
+  defp diff_association(%NotLoaded{}, current, %{cardinality: :many} = assoc, acc, opts) do
+    diff_association([], current, assoc, acc, opts)
   end
 
-  defp diff_association(nil, nil, %{cardinality: :one}, acc), do: acc
+  defp diff_association(nil, nil, %{cardinality: :one}, acc, _opts), do: acc
 
-  defp diff_association([], [], %{cardinality: :many}, acc), do: acc
+  defp diff_association([], [], %{cardinality: :many}, acc, _opts), do: acc
 
-  defp diff_association(previous, current, %{cardinality: :one, field: field}, acc) do
-    assoc_diff = do_diff(previous, current)
+  defp diff_association(previous, current, %{cardinality: :one, field: field}, acc, opts) do
+    assoc_diff = do_diff(previous, current, opts)
 
     if no_changes?(assoc_diff) do
       acc
@@ -302,8 +367,8 @@ defmodule EctoDiff do
     end
   end
 
-  defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc) do
-    primary_key_fields = struct.__schema__(:primary_key)
+  defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc, opts) do
+    primary_key_fields = get_primary_key_fields(struct, opts)
 
     if primary_key_fields == [],
       do: raise("cannot determine difference in many association with no primary key for `#{struct}`")
@@ -328,7 +393,7 @@ defmodule EctoDiff do
         prev_child = Map.get(previous_map, key)
         current_child = Map.get(current_map, key)
 
-        do_diff(prev_child, current_child)
+        do_diff(prev_child, current_child, opts)
       end)
       |> Enum.reject(&no_changes?/1)
 
@@ -337,6 +402,30 @@ defmodule EctoDiff do
     else
       [{field, diffs} | acc]
     end
+  end
+
+  defp get_primary_key_fields(struct, opts) do
+    overrides = Keyword.get(opts, :overrides, [])
+
+    case overrides[struct] do
+      nil -> struct.__schema__(:primary_key)
+      keys -> validate_keys!(struct, List.wrap(keys))
+    end
+  end
+
+  defp validate_keys!(struct, []) do
+    raise "no keys specified in override for #{inspect(struct)}"
+  end
+
+  defp validate_keys!(struct, keys) do
+    struct_fields = struct.__schema__(:fields) || []
+    missing = Enum.filter(keys, &(&1 not in struct_fields))
+
+    if missing != [] do
+      raise "the keys #{inspect(missing)} for #{inspect(struct)} are invalid or missing"
+    end
+
+    keys
   end
 
   defp no_changes?(%{effect: :changed, changes: map}) when map == %{}, do: true

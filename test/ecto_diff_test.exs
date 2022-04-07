@@ -3,6 +3,174 @@ defmodule EctoDiffTest do
 
   use EctoDiff.DataCase
 
+  describe "diff/3" do
+    test "no changes" do
+      {:ok, pet} = %{name: "Spot"} |> Pet.new() |> Repo.insert()
+
+      assert {:ok, :unchanged} = EctoDiff.diff(pet, pet, overrides: %{Pet => :refid})
+    end
+
+    test "insert" do
+      {:ok, pet} = %{name: "Spot"} |> Pet.new() |> Repo.insert()
+      refid = pet.refid
+
+      {:ok, diff} = EctoDiff.diff(nil, pet, overrides: %{Pet => :refid})
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{refid: ^refid},
+               changes: %{
+                 id: {nil, _id},
+                 name: {nil, "Spot"},
+                 refid: {nil, ^refid}
+               }
+             } = diff
+    end
+
+    test "update" do
+      {:ok, pet} = %{name: "Spot"} |> Pet.new() |> Repo.insert()
+      {:ok, updated_pet} = pet |> Pet.update(%{name: "McFluffFace"}) |> Repo.update()
+      refid = pet.refid
+
+      {:ok, diff} = EctoDiff.diff(pet, updated_pet, overrides: %{Pet => :refid})
+
+      assert %EctoDiff{
+               effect: :changed,
+               primary_key: %{refid: ^refid},
+               changes: %{
+                 name: {"Spot", "McFluffFace"}
+               }
+             } = diff
+    end
+
+    test "delete" do
+      {:ok, pet} = %{name: "Spot"} |> Pet.new() |> Repo.insert()
+      refid = pet.refid
+
+      {:ok, diff} = EctoDiff.diff(pet, nil, overrides: %{Pet => :refid})
+
+      assert %EctoDiff{
+               effect: :deleted,
+               primary_key: %{refid: ^refid},
+               changes: %{}
+             } = diff
+    end
+
+    test "insert with belongs_to" do
+      {:ok, pet} = %{name: "Spot", owner: %{name: "Chris"}} |> Pet.new() |> Repo.insert()
+      id = pet.id
+      refid = pet.refid
+      owner_id = pet.owner.id
+
+      {:ok, diff} = EctoDiff.diff(nil, pet, overrides: [{Pet, :refid}, {Owner, :id}])
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{refid: ^refid},
+               changes: %{
+                 id: {nil, ^id},
+                 name: {nil, "Spot"},
+                 refid: {nil, ^refid},
+                 owner_id: {nil, ^owner_id},
+                 owner: %EctoDiff{
+                   effect: :added,
+                   primary_key: %{id: ^owner_id},
+                   changes: %{
+                     id: {nil, ^owner_id},
+                     name: {nil, "Chris"}
+                   }
+                 }
+               }
+             } = diff
+    end
+
+    test "insert with multiple association types" do
+      {:ok, pet} =
+        %{
+          name: "Spot",
+          skills: [%{name: "Eating"}, %{name: "Sleeping"}],
+          owner: %{name: "Samuel"},
+          details: %{description: "It's a kitty!"}
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      %{
+        id: pet_id,
+        refid: pet_refid,
+        skills: [
+          %{id: eating_id, refid: eating_refid},
+          %{id: sleeping_id, refid: sleeping_refid}
+        ],
+        owner: %{id: owner_id, refid: owner_refid},
+        details: %{description: description, id: detail_id}
+      } = pet
+
+      {:ok, diff} = EctoDiff.diff(nil, pet, overrides: %{Pet => :refid, Skill => :refid})
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{refid: ^pet_refid},
+               changes: %{
+                 id: {nil, ^pet_id},
+                 name: {nil, "Spot"},
+                 refid: {nil, ^pet_refid},
+                 owner: %EctoDiff{
+                   effect: :added,
+                   primary_key: %{id: ^owner_id},
+                   changes: %{
+                     name: {nil, "Samuel"},
+                     id: {nil, ^owner_id},
+                     refid: {nil, ^owner_refid}
+                   }
+                 },
+                 skills: [
+                   %EctoDiff{
+                     effect: :added,
+                     primary_key: %{refid: ^eating_refid},
+                     changes: %{
+                       id: {nil, ^eating_id},
+                       pet_id: {nil, ^pet_id},
+                       name: {nil, "Eating"},
+                       refid: {nil, ^eating_refid}
+                     }
+                   },
+                   %EctoDiff{
+                     effect: :added,
+                     primary_key: %{refid: ^sleeping_refid},
+                     changes: %{
+                       id: {nil, ^sleeping_id},
+                       pet_id: {nil, ^pet_id},
+                       name: {nil, "Sleeping"},
+                       refid: {nil, ^sleeping_refid}
+                     }
+                   }
+                 ],
+                 details: %EctoDiff{
+                   effect: :added,
+                   primary_key: %{id: ^detail_id},
+                   changes: %{
+                     id: {nil, ^detail_id},
+                     description: {nil, ^description}
+                   }
+                 }
+               }
+             } = diff
+    end
+
+    test "raises when invalid override keys are specified" do
+      {:ok, pet} = %{name: "Spot", skills: [%{name: "Karate", level: 6}]} |> Pet.new() |> Repo.insert()
+
+      assert_raise RuntimeError, "the keys [:badkey] for EctoDiff.Skill are invalid or missing", fn ->
+        {:ok, _diff} = EctoDiff.diff(nil, pet, overrides: %{Skill => [:name, :badkey]})
+      end
+
+      assert_raise RuntimeError, "no keys specified in override for EctoDiff.Skill", fn ->
+        {:ok, _diff} = EctoDiff.diff(nil, pet, overrides: %{Skill => []})
+      end
+    end
+  end
+
   describe "diff/2" do
     test "no changes" do
       {:ok, pet} = %{name: "Spot"} |> Pet.new() |> Repo.insert()

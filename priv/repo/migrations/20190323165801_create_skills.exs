@@ -5,6 +5,7 @@ defmodule EctoDiff.Repo.Migrations.CreateSkills do
     create table(:skills) do
       add :name, :string
       add :level, :integer
+      add :refid, :uuid
       add :pet_id, references(:pets)
     end
   end

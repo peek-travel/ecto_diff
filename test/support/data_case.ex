@@ -7,7 +7,7 @@ defmodule EctoDiff.DataCase do
 
   using do
     quote do
-      alias EctoDiff.{Owner, Pet, Repo}
+      alias EctoDiff.{Owner, Pet, Repo, Skill}
 
       import EctoDiff.DataCase
     end
