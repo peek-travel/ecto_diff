@@ -33,12 +33,12 @@ defmodule EctoDiff do
 
   * `struct` - The module atom of the ecto schema being diffed.
   * `primary_key` - The primary key(s) of the ecto struct. This is a `map` of all primary keys in case of composite
-                    keys. For most common use-cases this will just be the map `%{id: id}`.
+  keys. For most common use-cases this will just be the map `%{id: id}`.
   * `changes` - A `map` representing all changes made. The keys will be fields and associations defined in the ecto
-                schema, but only fields and associations with changes will be present. For changed fields, the value
-                will be a `tuple` representing the previous and new values (i.e. `{previous, new}`). For associations,
-                the value will be another `t:EctoDiff.t/0` struct for cardinality "one" associations, or a list of
-                `t:EctoDiff.t/0` structs for cardinality "many" associations.
+  schema, but only fields and associations with changes will be present. For changed fields, the value
+  will be a `tuple` representing the previous and new values (i.e. `{previous, new}`). For associations,
+  the value will be another `t:EctoDiff.t/0` struct for cardinality "one" associations, or a list of
+  `t:EctoDiff.t/0` structs for cardinality "many" associations.
   * `effect` - The type of change for this ecto struct. See `t:effect/0` for details.
   * `previous` - The previous struct itself.
   * `current` - The current (new) struct itself.
@@ -60,9 +60,12 @@ defmodule EctoDiff do
   * `:overrides` - A keyword list or map which provides a reference from a struct
     to a key (or list of keys) on that struct which will be used as the primary key
     (simple or composite) for diffing.
+  * `:include_virtual_fields` - A boolean which determines whether or not virtual fields
+    should be included in the diff. Defaults to `false`.
   """
   @type diff_opts :: [
-          overrides: overrides
+          overrides: overrides,
+          include_virtual_fields: boolean
         ]
 
   @typedoc """
@@ -248,7 +251,7 @@ defmodule EctoDiff do
   defp do_diff(%struct{} = previous, %struct{} = current, opts) do
     primary_key_fields = get_primary_key_fields(struct, opts)
 
-    field_changes = fields(previous, current)
+    field_changes = fields(previous, current, opts)
 
     changes =
       field_changes
@@ -276,10 +279,14 @@ defmodule EctoDiff do
     }
   end
 
-  defp fields(%struct{} = previous, %struct{} = current) do
+  defp fields(%struct{} = previous, %struct{} = current, opts) do
+    include_virtual_fields? = Keyword.get(opts, :include_virtual_fields, false)
     field_names = struct.__schema__(:fields) -- struct.__schema__(:embeds)
 
     field_names
+    |> then(fn names ->
+      if include_virtual_fields?, do: names ++ struct.__schema__(:virtual_fields), else: field_names
+    end)
     |> Enum.reduce([], &field(previous, current, &1, &2))
     |> Map.new()
   end
