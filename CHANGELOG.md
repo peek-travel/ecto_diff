@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
-- Added `:include_virtual_fields` as an option for diffing. This option allows specification of whether or not to include virtual fields in a diff. Virtual fields are not included by default. Minimum Ecto version required is 3.8.
+- Added `:include_virtual_fields` as an option for diffing. This option specifies whether to include virtual fields in a diff. Virtual fields are not included by default. Minimum Ecto version required is 3.8.
 
 ## [0.4.0][]
 

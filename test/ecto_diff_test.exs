@@ -170,7 +170,7 @@ defmodule EctoDiffTest do
       end
     end
 
-    test "includes changes to virtual fields" do
+    test "includes changes to virtual fields when the option include_virtual_fields is true" do
       {:ok, pet} = %{name: "Spot", owner: %{name: "Chris"}} |> Pet.new() |> Repo.insert()
       pet = Map.put(pet, :owner_email, "user@example.com")
       id = pet.id
@@ -186,6 +186,22 @@ defmodule EctoDiffTest do
                  owner_email: {nil, "user@example.com"}
                }
              } = diff
+    end
+
+    test "does not include changes to virtual fields when the option include_virtual_fields is false" do
+      {:ok, pet} = %{name: "Spot", owner: %{name: "Chris"}} |> Pet.new() |> Repo.insert()
+      pet = Map.put(pet, :owner_email, "user@example.com")
+      id = pet.id
+
+      {:ok, diff} = EctoDiff.diff(nil, pet, include_virtual_fields: false)
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{id: ^id},
+               changes: changes
+             } = diff
+
+      refute Map.has_key?(changes, :owner_email)
     end
   end
 

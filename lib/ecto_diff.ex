@@ -284,12 +284,13 @@ defmodule EctoDiff do
     field_names = struct.__schema__(:fields) -- struct.__schema__(:embeds)
 
     field_names
-    |> then(fn names ->
-      if include_virtual_fields?, do: names ++ struct.__schema__(:virtual_fields), else: field_names
-    end)
+    |> maybe_include_virtual_fields(struct, include_virtual_fields?)
     |> Enum.reduce([], &field(previous, current, &1, &2))
     |> Map.new()
   end
+
+  defp maybe_include_virtual_fields(names, struct, true), do: names ++ struct.__schema__(:virtual_fields)
+  defp maybe_include_virtual_fields(names, _struct, false), do: names
 
   defp field(previous, current, field, acc) do
     previous_value = Map.get(previous, field)
