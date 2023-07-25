@@ -60,12 +60,9 @@ defmodule EctoDiff do
   * `:overrides` - A keyword list or map which provides a reference from a struct
     to a key (or list of keys) on that struct which will be used as the primary key
     (simple or composite) for diffing.
-  * `:include_virtual_fields` - A boolean which determines whether or not virtual fields
-    should be included in the diff. Defaults to `false`.
   """
   @type diff_opts :: [
-          overrides: overrides,
-          include_virtual_fields: boolean
+          overrides: overrides
         ]
 
   @typedoc """
@@ -251,7 +248,7 @@ defmodule EctoDiff do
   defp do_diff(%struct{} = previous, %struct{} = current, opts) do
     primary_key_fields = get_primary_key_fields(struct, opts)
 
-    field_changes = fields(previous, current, opts)
+    field_changes = fields(previous, current)
 
     changes =
       field_changes
@@ -279,18 +276,13 @@ defmodule EctoDiff do
     }
   end
 
-  defp fields(%struct{} = previous, %struct{} = current, opts) do
-    include_virtual_fields? = Keyword.get(opts, :include_virtual_fields, false)
-    field_names = struct.__schema__(:fields) -- struct.__schema__(:embeds)
+  defp fields(%struct{} = previous, %struct{} = current) do
+    field_names = struct.__schema__(:fields) ++ (struct.__schema__(:virtual_fields) -- struct.__schema__(:embeds))
 
     field_names
-    |> maybe_include_virtual_fields(struct, include_virtual_fields?)
     |> Enum.reduce([], &field(previous, current, &1, &2))
     |> Map.new()
   end
-
-  defp maybe_include_virtual_fields(names, struct, true), do: names ++ struct.__schema__(:virtual_fields)
-  defp maybe_include_virtual_fields(names, _struct, false), do: names
 
   defp field(previous, current, field, acc) do
     previous_value = Map.get(previous, field)
