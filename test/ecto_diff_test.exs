@@ -169,6 +169,24 @@ defmodule EctoDiffTest do
         {:ok, _diff} = EctoDiff.diff(nil, pet, overrides: %{Skill => []})
       end
     end
+
+    test "includes changes to virtual fields" do
+      {:ok, pet} = %{name: "Spot", owner: %{name: "Chris"}} |> Pet.new() |> Repo.insert()
+      pet = Map.put(pet, :owner_email, "user@example.com")
+      id = pet.id
+
+      {:ok, diff} = EctoDiff.diff(nil, pet)
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{id: ^id},
+               changes: %{
+                 id: {nil, ^id},
+                 name: {nil, "Spot"},
+                 owner_email: {nil, "user@example.com"}
+               }
+             } = diff
+    end
   end
 
   describe "diff/2" do
