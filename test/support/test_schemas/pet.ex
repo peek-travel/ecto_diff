@@ -8,6 +8,7 @@ defmodule EctoDiff.Pet do
     field :name, :string
     field :type, :string, default: "Cat"
     field :refid, Ecto.UUID, autogenerate: true
+    field :owner_email, :string, virtual: true
 
     belongs_to :owner, EctoDiff.Owner, on_replace: :update
     has_many :skills, EctoDiff.Skill, on_replace: :delete

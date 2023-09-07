@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
-- Nothing yet
+- Include virtual fields in the EctoDiff struct by default. Minimum Ecto version required is 3.8.
 
 ## [0.4.0][]
 

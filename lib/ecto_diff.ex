@@ -33,12 +33,12 @@ defmodule EctoDiff do
 
   * `struct` - The module atom of the ecto schema being diffed.
   * `primary_key` - The primary key(s) of the ecto struct. This is a `map` of all primary keys in case of composite
-                    keys. For most common use-cases this will just be the map `%{id: id}`.
+  keys. For most common use-cases this will just be the map `%{id: id}`.
   * `changes` - A `map` representing all changes made. The keys will be fields and associations defined in the ecto
-                schema, but only fields and associations with changes will be present. For changed fields, the value
-                will be a `tuple` representing the previous and new values (i.e. `{previous, new}`). For associations,
-                the value will be another `t:EctoDiff.t/0` struct for cardinality "one" associations, or a list of
-                `t:EctoDiff.t/0` structs for cardinality "many" associations.
+  schema, but only fields and associations with changes will be present. For changed fields, the value
+  will be a `tuple` representing the previous and new values (i.e. `{previous, new}`). For associations,
+  the value will be another `t:EctoDiff.t/0` struct for cardinality "one" associations, or a list of
+  `t:EctoDiff.t/0` structs for cardinality "many" associations.
   * `effect` - The type of change for this ecto struct. See `t:effect/0` for details.
   * `previous` - The previous struct itself.
   * `current` - The current (new) struct itself.
@@ -277,7 +277,7 @@ defmodule EctoDiff do
   end
 
   defp fields(%struct{} = previous, %struct{} = current) do
-    field_names = struct.__schema__(:fields) -- struct.__schema__(:embeds)
+    field_names = struct.__schema__(:fields) ++ (struct.__schema__(:virtual_fields) -- struct.__schema__(:embeds))
 
     field_names
     |> Enum.reduce([], &field(previous, current, &1, &2))
