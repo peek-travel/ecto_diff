@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
-- Include virtual fields in the EctoDiff struct by default. Minimum Ecto version required is 3.8.
+- Nothing yet
+
+## [0.5.0][]
+
+### Added
+
+- Include virtual fields in the EctoDiff struct by default. This might be a breaking change for a very small number of users. [#150](https://github.com/peek-travel/ecto_diff/pull/150)
+- Minimum Ecto version required is now 3.8 to be able to inspect virtual fields.
 
 ## [0.4.0][]
 
