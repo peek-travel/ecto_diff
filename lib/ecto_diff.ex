@@ -60,9 +60,13 @@ defmodule EctoDiff do
   * `:overrides` - A keyword list or map which provides a reference from a struct
     to a key (or list of keys) on that struct which will be used as the primary key
     (simple or composite) for diffing.
+
+  * `:select_fields` - A keyword list to select fields for diffing. 
+    This is useful when you only want to diff a subset of fields on a struct.
   """
   @type diff_opts :: [
-          overrides: overrides
+          overrides: overrides,
+          select_fields: select_fields
         ]
 
   @typedoc """
@@ -80,6 +84,26 @@ defmodule EctoDiff do
       %{Skill => :refid, Owner => [:id, :refid]}
   """
   @type overrides :: [{module, primary_key}] | %{module => primary_key}
+
+  @typedoc """
+  A keyword list specifying a subset of fields to diff on a struct, or associated struct.
+
+  Fields that are not specified will not be diffed, or returned.
+
+  Use `:all` to explicitly specify all fields. This is equivalent to not providing a `:select_fields` option.
+  Use `[field: [:all]]` to specify all fields on a given struct.
+
+  Selecting an association and keys without selecting that association field in the parent fields
+  results in the associated struct being excluded, as it is not selected.
+
+  Note on Embedded Schemas: fields within an embeds are all or nothing. You cannot select individual fields
+
+  ## Examples:
+
+        [pet: [:name, :type, :skill], skill: [:all]]
+  """
+
+  @type select_fields :: [{struct_field, :all} | {struct_field, [struct_field]}] | :all
 
   @typedoc """
   A struct field or list of fields used to define a simple or composite primary key.
@@ -248,7 +272,7 @@ defmodule EctoDiff do
   defp do_diff(%struct{} = previous, %struct{} = current, opts) do
     primary_key_fields = get_primary_key_fields(struct, opts)
 
-    field_changes = fields(previous, current)
+    field_changes = fields(previous, current, opts)
 
     changes =
       field_changes
@@ -276,10 +300,12 @@ defmodule EctoDiff do
     }
   end
 
-  defp fields(%struct{} = previous, %struct{} = current) do
-    field_names = struct.__schema__(:fields) ++ (struct.__schema__(:virtual_fields) -- struct.__schema__(:embeds))
+  defp fields(%struct{} = previous, %struct{} = current, opts) do
+    all_fields = struct.__schema__(:fields) ++ (struct.__schema__(:virtual_fields) -- struct.__schema__(:embeds))
 
-    field_names
+    selected_fields = if_only_select_fields(all_fields, current, opts)
+
+    selected_fields
     |> Enum.reduce([], &field(previous, current, &1, &2))
     |> Map.new()
   end
@@ -295,10 +321,34 @@ defmodule EctoDiff do
     end
   end
 
+  defp if_only_select_fields(fields, %struct{}, opts) do
+    source = struct.__schema__(:source)
+    select_fields = opts[:select_fields]
+
+    if_only_select_fields(fields, source, select_fields)
+  end
+
+  defp if_only_select_fields(fields, source, select_fields) when is_nil(source) or is_nil(select_fields),
+    do: fields
+
+  defp if_only_select_fields(fields, _source, :all), do: fields
+
+  defp if_only_select_fields(fields, source, select_fields) do
+    key = String.to_atom(source)
+
+    case select_fields[key] do
+      [:all] -> fields
+      [_ | _] = selected_fields -> Enum.filter(fields, &(&1 in selected_fields))
+      _ -> []
+    end
+  end
+
   defp embeds(%struct{} = previous, %struct{} = current, opts) do
     embed_names = struct.__schema__(:embeds)
 
-    embed_names
+    selected_embeds = if_only_select_fields(embed_names, current, opts)
+
+    selected_embeds
     |> Enum.reduce([], &embed(previous, current, &1, &2, opts))
     |> Map.new()
   end
@@ -319,7 +369,9 @@ defmodule EctoDiff do
   defp associations(%struct{} = previous, %struct{} = current, opts) do
     association_names = struct.__schema__(:associations)
 
-    association_names
+    selected_associations = if_only_select_fields(association_names, current, opts)
+
+    selected_associations
     |> Enum.reduce([], &association(previous, current, &1, &2, opts))
     |> Map.new()
   end

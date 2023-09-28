@@ -187,6 +187,138 @@ defmodule EctoDiffTest do
                }
              } = diff
     end
+
+    test "can limit return to selected fields when select_fields specified in opts" do
+      {:ok, pet} =
+        %{
+          name: "Spot",
+          skills: [%{name: "Eating"}, %{name: "Sleeping"}],
+          owner: %{name: "Samuel"},
+          details: %{description: "It's a kitty!"},
+          resources: [%{toys: [%{name: "Ball", type: "Toy", quantity: 3}, %{name: "Bone", type: "Treat", quantity: 2}]}]
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      pet = Repo.preload(pet, [:resources, :toys])
+      pet_id = pet.id
+      details_id = pet.details.id
+      [%{id: resource_id}] = pet.resources
+      [ball_id, bone_id] = Enum.map(pet.toys, & &1.id)
+
+      only_pet = [pets: [:name, :id]]
+      {:ok, pet_diff} = EctoDiff.diff(nil, pet, select_fields: only_pet)
+      assert %{id: {nil, pet_id}, name: {nil, "Spot"}} == pet_diff.changes
+
+      # embeds are limited to the embeded field selection, not embeded fields selection
+      # e.g. [pets: [:details]], [pets: [:details], details: [:all]], [pets: [:details], details: [:id]]
+      # will all produce the same result
+      only_details = [pets: [:details]]
+      {:ok, details_diff} = EctoDiff.diff(nil, pet, select_fields: only_details)
+
+      assert %{description: {nil, "It's a kitty!"}, id: {nil, details_id}} == details_diff.changes.details.changes
+      assert Map.keys(details_diff.changes) == [:details]
+
+      only_toys = [pets: [:toys], toys: [:all]]
+      {:ok, toys_diff} = EctoDiff.diff(nil, pet, select_fields: only_toys)
+
+      assert %{
+               toys: [
+                 %EctoDiff{
+                   changes: %{name: {nil, "Ball"}, quantity: {1, 3}, type: {nil, "Toy"}},
+                   effect: :added,
+                   primary_key: %{id: ^ball_id}
+                 },
+                 %EctoDiff{
+                   changes: %{name: {nil, "Bone"}, quantity: {1, 2}, type: {nil, "Treat"}},
+                   effect: :added,
+                   primary_key: %{id: ^bone_id}
+                 }
+               ]
+             } = toys_diff.changes
+
+      assert Map.keys(toys_diff.changes) == [:toys]
+
+      only_pet_resources_and_toys = [
+        pets: [:name, :id, :resources],
+        toys: [:name, :type, :quantity],
+        resources: [:id, :toys]
+      ]
+
+      {:ok, pet_resources_and_toys_diff} = EctoDiff.diff(nil, pet, select_fields: only_pet_resources_and_toys)
+
+      assert %{
+               id: {nil, ^pet_id},
+               name: {nil, "Spot"},
+               resources: [
+                 %EctoDiff{
+                   changes: %{
+                     id: {nil, ^resource_id},
+                     toys: [
+                       %EctoDiff{
+                         changes: %{name: {nil, "Ball"}, quantity: {1, 3}, type: {nil, "Toy"}},
+                         effect: :added,
+                         primary_key: %{id: ^ball_id}
+                       },
+                       %EctoDiff{
+                         changes: %{name: {nil, "Bone"}, quantity: {1, 2}, type: {nil, "Treat"}},
+                         effect: :added,
+                         primary_key: %{id: ^bone_id}
+                       }
+                     ]
+                   },
+                   effect: :added,
+                   primary_key: %{id: ^resource_id}
+                 }
+               ]
+             } = pet_resources_and_toys_diff.changes
+
+      [resources] = pet_resources_and_toys_diff.changes.resources
+      assert Map.keys(pet_resources_and_toys_diff.changes) == [:id, :name, :resources]
+      assert Map.keys(resources.changes) == [:id, :toys]
+    end
+
+    test ":all arg in :select_fields returns all fields" do
+      {:ok, pet} =
+        %{
+          name: "Spot",
+          skills: [%{name: "Eating"}, %{name: "Sleeping"}],
+          owner: %{name: "Samuel"},
+          details: %{description: "It's a kitty!"},
+          resources: [%{toys: [%{name: "Ball", type: "Toy", quantity: 3}, %{name: "Bone", type: "Treat", quantity: 2}]}]
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      pet = Repo.preload(pet, [:resources, :toys])
+
+      explicit_all = [pets: [:all], skills: [:all], owners: [:all], details: [:all], resources: [:all], toys: [:all]]
+      implicit_all = :all
+      {:ok, explicit_all_diff} = EctoDiff.diff(nil, pet, select_fields: explicit_all)
+      {:ok, implicit_all_diff} = EctoDiff.diff(nil, pet, select_fields: implicit_all)
+      {:ok, default_all_diff} = EctoDiff.diff(nil, pet)
+
+      assert explicit_all_diff == implicit_all_diff
+      assert explicit_all_diff == default_all_diff
+
+      assert Map.keys(explicit_all_diff.changes) == [
+               :details,
+               :id,
+               :name,
+               :owner,
+               :owner_id,
+               :refid,
+               :resources,
+               :skills,
+               :toys
+             ]
+
+      {:ok, pets_only_diff} = EctoDiff.diff(nil, pet, select_fields: [pets: [:all]])
+      assert Map.keys(pets_only_diff.changes) == [:details, :id, :name, :owner_id, :refid]
+
+      {:ok, toys_only_diff} = EctoDiff.diff(nil, pet, select_fields: [pets: [:toys], toys: [:all]])
+      assert Map.keys(toys_only_diff.changes) == [:toys]
+    end
   end
 
   describe "diff/2" do

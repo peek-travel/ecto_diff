@@ -135,4 +135,80 @@ iex> EctoDiff.diff(initial_pet, updated_pet)
  >}
 ```
 
+#### Returning Select Fields
+
+To limit processing and returning the fields and associations for the diff the `:select_fields` option may be provided a keyword list of desired fields.
+
+Any field not in `:select_fields` will be excluded from the diff.
+```elixir
+iex> EctoDiff.diff(initial_pet, updated_pet, select_fields: [pets: [:name, :id]])
+
+{:ok,
+  #EctoDiff<
+    struct: Pet,
+    primary_key: %{id: 2},
+    effect: :changed,
+    previous: #Pet<>,
+    current: #Pet<>,
+    changes: %{
+        name: {"Spot", "Spots"},
+    }
+  >
+}
+```
+
+The keyword list is a depth of 2 representation of the field and subfields for each selected field. If a field is given as a key, with subfields given as the values but is not provided as the appropriate value in a parent key it will be excluded.
+```elixir
+iex> EctoDiff.diff(initial_pet, updated_pet, select_fields: [pets: [:name, :id], skills: [:level]])
+
+{:ok,
+  #EctoDiff<
+    struct: Pet,
+    primary_key: %{id: 2},
+    effect: :changed,
+    previous: #Pet<>,
+    current: #Pet<>,
+    changes: %{
+        name: {"Spot", "Spots"},
+    }
+  >
+}
+
+iex> EctoDiff.diff(initial_pet, updated_pet, select_fields: [pets: [:name, :id, :skills], skills: [:level]])
+
+{:ok,
+  #EctoDiff<
+    struct: Pet,
+    primary_key: %{id: 2},
+    effect: :changed,
+    previous: #Pet<>,
+    current: #Pet<>,
+    changes: %{
+        name: {"Spot", "Spots"},
+        skills: [
+            #EctoDiff<
+                struct: Skill,
+                primary_key: %{id: 5},
+                effect: :changed,
+                previous: #Skill<>,
+                current: #Skill<>,
+                changes: %{level: {1, 2}}
+            >,
+        ]
+    }
+  >
+}
+```
+
+#### Using `:all`
+If `:all` is provided then all fields will be included. At the top level `:all` returns the same result as not using the `:select_fields` option. When used as the value for a key `:all` returns all fields for that key.
+
+For example, the following will return all fields for `Pet` and `Toys`, and only `id` for `Resources`
+```elixir
+select_fields: [pets: [:all], resources: [:id, :toys], toys: [:all]]
+```
+
+#### Default Behavior
+When the `:select_fields` option is not provided all fields are returned. This is equal to using `select_fields: :all`.
+
 Detailed documentation can be found at [https://hexdocs.pm/ecto_diff](https://hexdocs.pm/ecto_diff).
