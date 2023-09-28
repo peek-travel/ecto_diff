@@ -367,6 +367,32 @@ defmodule EctoDiff do
     end
   end
 
+  defp diff_association(previous, current, %{cardinality: :many, through: [through, field]}, acc, opts) do
+    assoc_diff =
+      acc
+      |> Keyword.get_values(through)
+      |> List.flatten()
+      |> Enum.map(& &1[:changes][field])
+
+    diff =
+      case assoc_diff do
+        [_ | _] = diff ->
+          List.flatten(diff)
+
+        _ ->
+          {previous, current} =
+            case length(previous) - length(current) do
+              0 -> {previous, current}
+              n when n > 0 -> {previous, current ++ List.duplicate(nil, n)}
+              n when n < 0 -> {previous ++ List.duplicate(nil, -n), current}
+            end
+
+          Enum.zip_with([previous, current], fn [p, c] -> do_diff(p, c, opts) end)
+      end
+
+    if no_changes?(diff), do: acc, else: [{field, diff} | acc]
+  end
+
   defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc, opts) do
     primary_key_fields = get_primary_key_fields(struct, opts)
 
@@ -428,7 +454,8 @@ defmodule EctoDiff do
     keys
   end
 
-  defp no_changes?(%{effect: :changed, changes: map}) when map == %{}, do: true
+  defp no_changes?([_ | _] = changes), do: Enum.any?(changes, &no_changes?/1)
+  defp no_changes?(%{effect: effect, changes: map}) when map == %{} and effect in [:added, :changed], do: true
   defp no_changes?(_), do: false
 
   defp primary_key_nil?(key), do: Enum.all?(key, fn {_key, value} -> is_nil(value) end)

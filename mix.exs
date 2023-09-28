@@ -8,7 +8,7 @@ defmodule EctoDiff.MixProject do
     [
       app: :ecto_diff,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -83,7 +83,7 @@ defmodule EctoDiff.MixProject do
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.8", only: [:dev, :test]},
-      {:ecto, "~> 3.8"},
+      {:ecto, "~> 3.10.3"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14", only: :test},
       {:jason, ">= 1.0.0", only: [:dev, :test]},

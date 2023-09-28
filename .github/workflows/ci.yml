@@ -5,7 +5,7 @@ on: push
 env:
   MIX_ENV: test
   OTP_VERSION_SPEC: "24.2.1"
-  ELIXIR_VERSION_SPEC: "1.13.3"
+  ELIXIR_VERSION_SPEC: "1.14"
 
 jobs:
   compile:
