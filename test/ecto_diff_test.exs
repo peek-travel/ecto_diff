@@ -642,13 +642,16 @@ defmodule EctoDiffTest do
         |> Pet.new()
         |> Repo.insert()
 
-      pet = Repo.preload(pet, [:resources, :toys])
+      pet = Repo.preload(pet, :toys)
 
       id = pet.id
       [%{id: resource_id}] = pet.resources
       [ball_id, mouse_id] = Enum.map(pet.toys, & &1.id)
 
       {:ok, diff} = EctoDiff.diff(nil, pet)
+      [%{changes: %{toys: resource_toys}}] = diff.changes.resources
+
+      assert resource_toys == diff.changes.toys
 
       assert %EctoDiff{
                effect: :added,
@@ -817,6 +820,9 @@ defmodule EctoDiffTest do
         |> Repo.update()
 
       {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+      [%{changes: %{toys: resource_toys}}] = diff.changes.resources
+
+      assert resource_toys == diff.changes.toys
 
       assert %EctoDiff{
                effect: :changed,
@@ -866,6 +872,9 @@ defmodule EctoDiffTest do
       {:ok, updated_pet} = pet |> Pet.update(%{resources: [%{id: resource_id, toys: []}]}) |> Repo.update()
 
       {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+      [%{changes: %{toys: resource_toys}}] = diff.changes.resources
+
+      assert resource_toys == diff.changes.toys
 
       assert %EctoDiff{
                effect: :changed,
