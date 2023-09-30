@@ -333,7 +333,7 @@ defmodule EctoDiffTest do
              } = diff
     end
 
-    # TODO: the following case only tests belongs_to with on_replace: :update
+    # the following case only tests belongs_to with on_replace: :update
     # other cases should be written for on_replace: :nilify and :delete
 
     test "update a belongs_to using on_replace: :update" do
@@ -989,7 +989,7 @@ defmodule EctoDiffTest do
              } = diff
     end
 
-    # TODO: the following case only tests embeds_one with on_replace: :update
+    # the following case only tests embeds_one with on_replace: :update
     # other cases should be written for other options to on_replace
 
     test "update an embeds_one using on_replace: :update" do
