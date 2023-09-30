@@ -389,7 +389,9 @@ defmodule EctoDiff do
           through_association = owner.__schema__(:association, through).related
           association = through_association.__schema__(:association, assoc_field)
 
-          diff_association(previous, current, association, acc, opts)
+          diff = diff_association(previous, current, association, acc, opts)
+
+          diff
           |> Keyword.get_values(assoc_field)
           |> List.flatten()
       end
