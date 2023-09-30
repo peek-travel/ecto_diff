@@ -367,12 +367,18 @@ defmodule EctoDiff do
     end
   end
 
-  defp diff_association(previous, current, %{cardinality: :many, through: [through, field]}, acc, opts) do
+  defp diff_association(
+         previous,
+         current,
+         %{cardinality: :many, through: [through, assoc_field], owner: owner},
+         acc,
+         opts
+       ) do
     assoc_diff =
       acc
       |> Keyword.get_values(through)
       |> List.flatten()
-      |> Enum.map(& &1[:changes][field])
+      |> Enum.map(& &1[:changes][assoc_field])
 
     diff =
       case assoc_diff do
@@ -380,20 +386,26 @@ defmodule EctoDiff do
           List.flatten(diff)
 
         _ ->
-          {previous, current} =
-            case length(previous) - length(current) do
-              0 -> {previous, current}
-              n when n > 0 -> {previous, current ++ List.duplicate(nil, n)}
-              n when n < 0 -> {previous ++ List.duplicate(nil, -n), current}
-            end
+          through_association = owner.__schema__(:association, through).related
+          association = through_association.__schema__(:association, assoc_field)
 
-          Enum.zip_with([previous, current], fn [p, c] -> do_diff(p, c, opts) end)
+          diff_association(previous, current, association, acc, opts)
+          |> Keyword.get_values(assoc_field)
+          |> List.flatten()
       end
 
-    if no_changes?(diff), do: acc, else: [{field, diff} | acc]
+    if no_changes?(diff), do: acc, else: [{assoc_field, diff} | acc]
   end
 
-  defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc, opts) do
+  defp diff_association(
+         previous,
+         current,
+         %{cardinality: :many, field: field} = association,
+         acc,
+         opts
+       ) do
+    %{related: struct} = association
+
     primary_key_fields = get_primary_key_fields(struct, opts)
 
     if primary_key_fields == [],
@@ -455,6 +467,7 @@ defmodule EctoDiff do
   end
 
   defp no_changes?([_ | _] = changes), do: Enum.any?(changes, &no_changes?/1)
+  defp no_changes?([]), do: true
   defp no_changes?(%{effect: effect, changes: map}) when map == %{} and effect in [:added, :changed], do: true
   defp no_changes?(_), do: false
 
