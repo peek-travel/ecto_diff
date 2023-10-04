@@ -914,6 +914,8 @@ defmodule EctoDiffTest do
         |> Pet.new()
         |> Repo.insert()
 
+      pet = Repo.preload(pet, :toys)
+
       {:ok, updated_pet} = pet |> Pet.update(%{name: "McFluffFace"}) |> Repo.update()
       id = pet.id
 
