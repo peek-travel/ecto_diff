@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
-- Nothing yet
+- Implement diffing for has_many through associations, resolves associated error.
 
 ## [0.5.0][]
 
