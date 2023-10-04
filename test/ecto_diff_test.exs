@@ -628,7 +628,7 @@ defmodule EctoDiffTest do
         |> Pet.new()
         |> Repo.insert()
 
-      assert {:ok, :unchanged} = EctoDiff.diff(pet, pet)
+      assert EctoDiff.diff(pet, pet) == {:ok, :unchanged}
     end
 
     test "insert with has_many through" do
@@ -914,7 +914,6 @@ defmodule EctoDiffTest do
         |> Pet.new()
         |> Repo.insert()
 
-      pet = Repo.preload(pet, :toys)
       {:ok, updated_pet} = pet |> Pet.update(%{name: "McFluffFace"}) |> Repo.update()
       id = pet.id
 
