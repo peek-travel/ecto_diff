@@ -367,7 +367,40 @@ defmodule EctoDiff do
     end
   end
 
-  defp diff_association(previous, current, %{cardinality: :many, field: field, related: struct}, acc, opts) do
+  # The association likely already has the diff for the many through association,
+  # Attempt to get the diff through the association, calculate the diff if not found.
+  defp diff_association(
+         previous,
+         current,
+         %{cardinality: :many, through: [through, assoc_field], owner: owner},
+         acc,
+         opts
+       ) do
+    diff =
+      case get_association_through_diff(acc, through, assoc_field) do
+        [%EctoDiff{} | _] = diff ->
+          diff
+
+        [] ->
+          through_association = owner.__schema__(:association, through).related
+          association = through_association.__schema__(:association, assoc_field)
+
+          diff = diff_association(previous, current, association, acc, opts)
+          get_association_through_diff(diff, through, assoc_field)
+      end
+
+    if diff == [], do: acc, else: [{assoc_field, diff} | acc]
+  end
+
+  defp diff_association(
+         previous,
+         current,
+         %{cardinality: :many, field: field} = association,
+         acc,
+         opts
+       ) do
+    %{related: struct} = association
+
     primary_key_fields = get_primary_key_fields(struct, opts)
 
     if primary_key_fields == [],
@@ -404,6 +437,17 @@ defmodule EctoDiff do
     end
   end
 
+  # returns the diff for an association through for assoc_field, or an empty list
+  # removes [nil] to return empty list when `assoc_field` is not present
+  # removes diffs with no changes
+  defp get_association_through_diff(diff, through, assoc_field) do
+    with [assoc_diffs] <- Keyword.get_values(diff, through) do
+      assoc_diffs
+      |> Enum.flat_map(& &1[:changes][assoc_field])
+      |> Enum.reject(&(&1 == nil or no_changes?(&1)))
+    end
+  end
+
   defp get_primary_key_fields(struct, opts) do
     overrides = Keyword.get(opts, :overrides, [])
 
@@ -428,7 +472,7 @@ defmodule EctoDiff do
     keys
   end
 
-  defp no_changes?(%{effect: :changed, changes: map}) when map == %{}, do: true
+  defp no_changes?(%{effect: effect, changes: map}) when map == %{} and effect in [:added, :changed], do: true
   defp no_changes?(_), do: false
 
   defp primary_key_nil?(key), do: Enum.all?(key, fn {_key, value} -> is_nil(value) end)

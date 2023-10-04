@@ -333,7 +333,7 @@ defmodule EctoDiffTest do
              } = diff
     end
 
-    # TODO: the following case only tests belongs_to with on_replace: :update
+    # the following case only tests belongs_to with on_replace: :update
     # other cases should be written for on_replace: :nilify and :delete
 
     test "update a belongs_to using on_replace: :update" do
@@ -614,6 +614,325 @@ defmodule EctoDiffTest do
              } = diff
     end
 
+    # Has Many through polymorphic Association
+
+    test "no changes with has_many through" do
+      {:ok, pet} =
+        %{
+          name: "Spot",
+          skills: [%{name: "Eating"}, %{name: "Sleeping"}],
+          resources: [
+            %{toys: [%{name: "ball", type: "play", quantity: 1}, %{name: "mouse", type: "play", quantity: 2}]}
+          ]
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      assert EctoDiff.diff(pet, pet) == {:ok, :unchanged}
+    end
+
+    test "insert with has_many through" do
+      {:ok, pet} =
+        %{
+          name: "Spot",
+          resources: [
+            %{toys: [%{name: "ball", type: "play", quantity: 1}, %{name: "mouse", type: "play", quantity: 2}]}
+          ]
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      pet = Repo.preload(pet, :toys)
+
+      id = pet.id
+      [%{id: resource_id}] = pet.resources
+      [ball_id, mouse_id] = Enum.map(pet.toys, & &1.id)
+
+      {:ok, diff} = EctoDiff.diff(nil, pet)
+      [%{changes: %{toys: resource_toys}}] = diff.changes.resources
+
+      assert resource_toys == diff.changes.toys
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{id: ^id},
+               changes: %{
+                 id: {nil, ^id},
+                 name: {nil, "Spot"},
+                 resources: [
+                   %EctoDiff{
+                     effect: :added,
+                     changes: %{
+                       pet_id: {nil, ^id}
+                     }
+                   }
+                 ],
+                 toys: [
+                   %EctoDiff{
+                     effect: :added,
+                     primary_key: %{id: ^ball_id},
+                     changes: %{
+                       id: {nil, ^ball_id},
+                       resource_id: {nil, ^resource_id},
+                       name: {nil, "ball"}
+                     }
+                   },
+                   %EctoDiff{
+                     effect: :added,
+                     primary_key: %{id: ^mouse_id},
+                     changes: %{
+                       id: {nil, ^mouse_id},
+                       resource_id: {nil, ^resource_id},
+                       name: {nil, "mouse"}
+                     }
+                   }
+                 ]
+               }
+             } = diff
+    end
+
+    test "insert with empty has_many through" do
+      {:ok, pet} =
+        %{
+          name: "Spot",
+          resources: [
+            %{toys: []}
+          ]
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      id = pet.id
+
+      {:ok, diff} = EctoDiff.diff(nil, pet)
+
+      assert %EctoDiff{
+               effect: :added,
+               primary_key: %{id: ^id},
+               changes: %{
+                 id: {nil, ^id},
+                 name: {nil, "Spot"},
+                 resources: [
+                   %EctoDiff{
+                     effect: :added,
+                     changes: %{
+                       pet_id: {nil, ^id}
+                     }
+                   }
+                 ]
+               }
+             } = diff
+    end
+
+    test "update with adding new has_many through records" do
+      {:ok, pet} = %{name: "Spot", resources: []} |> Pet.new() |> Repo.insert()
+
+      {:ok, updated_pet} =
+        pet
+        |> Pet.update(%{
+          resources: [
+            %{toys: [%{name: "ball", type: "play", quantity: 1}, %{name: "mouse", type: "play", quantity: 2}]}
+          ]
+        })
+        |> Repo.update()
+
+      updated_pet = Repo.preload(updated_pet, :toys)
+
+      id = pet.id
+      [%{id: resource_id}] = updated_pet.resources
+      %{"ball" => ball_id, "mouse" => mouse_id} = Enum.into(updated_pet.toys, %{}, &{&1.name, &1.id})
+
+      {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+      [%{changes: %{toys: resource_toys}}] = diff.changes.resources
+
+      assert resource_toys == diff.changes.toys
+
+      assert %EctoDiff{
+               effect: :changed,
+               primary_key: %{id: ^id},
+               changes: %{
+                 resources: [
+                   %EctoDiff{
+                     effect: :added,
+                     changes: %{
+                       pet_id: {nil, ^id},
+                       toys: [
+                         %EctoDiff{
+                           effect: :added,
+                           changes: %{}
+                         },
+                         %EctoDiff{
+                           effect: :added,
+                           changes: %{}
+                         }
+                       ]
+                     }
+                   }
+                 ],
+                 toys: [
+                   %EctoDiff{
+                     effect: :added,
+                     primary_key: %{id: ^ball_id},
+                     changes: %{
+                       id: {nil, ^ball_id},
+                       resource_id: {nil, ^resource_id},
+                       name: {nil, "ball"}
+                     }
+                   },
+                   %EctoDiff{
+                     effect: :added,
+                     primary_key: %{id: ^mouse_id},
+                     changes: %{
+                       id: {nil, ^mouse_id},
+                       resource_id: {nil, ^resource_id},
+                       name: {nil, "mouse"}
+                     }
+                   }
+                 ]
+               }
+             } = diff
+    end
+
+    test "update with has_many through, updating one of many records" do
+      {:ok, pet} =
+        %{
+          name: "Spot",
+          resources: [
+            %{toys: [%{name: "ball", type: "play", quantity: 1}, %{name: "mouse", type: "play", quantity: 2}]}
+          ]
+        }
+        |> Pet.new()
+        |> Repo.insert()
+
+      id = pet.id
+      pet = Repo.preload(pet, :toys)
+
+      %{"ball" => ball_id, "mouse" => mouse_id} = Enum.into(pet.toys, %{}, &{&1.name, &1.id})
+      [%{id: resource_id}] = pet.resources
+
+      {:ok, updated_pet} =
+        pet
+        |> Pet.update(%{
+          resources: [
+            %{id: resource_id, toys: [%{id: ball_id, quantity: 5}, %{id: mouse_id}]}
+          ]
+        })
+        |> Repo.update()
+
+      {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+      [%{changes: %{toys: resource_toys}}] = diff.changes.resources
+
+      assert resource_toys == diff.changes.toys
+
+      assert %EctoDiff{
+               effect: :changed,
+               primary_key: %{id: ^id},
+               changes: %{
+                 resources: [
+                   %EctoDiff{
+                     effect: :changed,
+                     primary_key: %{id: ^resource_id},
+                     changes: %{
+                       toys: [
+                         %EctoDiff{
+                           effect: :changed,
+                           primary_key: %{id: ^ball_id},
+                           changes: %{
+                             quantity: {1, 5}
+                           }
+                         }
+                       ]
+                     }
+                   }
+                 ],
+                 toys: [
+                   %EctoDiff{
+                     effect: :changed,
+                     primary_key: %{id: ^ball_id},
+                     changes: %{
+                       quantity: {1, 5}
+                     }
+                   }
+                 ]
+               }
+             } = diff
+    end
+
+    test "update with has_many through, removing one of many records using on_replace: :delete" do
+      {:ok, pet} =
+        %{name: "Spot", resources: [%{toys: [%{name: "ball", type: "play", quantity: 1}]}]}
+        |> Pet.new()
+        |> Repo.insert()
+
+      pet = Repo.preload(pet, :toys)
+      id = pet.id
+      [%{id: resource_id}] = pet.resources
+      [ball_id] = Enum.map(pet.toys, & &1.id)
+
+      {:ok, updated_pet} = pet |> Pet.update(%{resources: [%{id: resource_id, toys: []}]}) |> Repo.update()
+
+      {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+      [%{changes: %{toys: resource_toys}}] = diff.changes.resources
+
+      assert resource_toys == diff.changes.toys
+
+      assert %EctoDiff{
+               effect: :changed,
+               primary_key: %{id: ^id},
+               changes: %{
+                 resources: [
+                   %EctoDiff{
+                     effect: :changed,
+                     primary_key: %{id: ^resource_id},
+                     changes: %{
+                       toys: [
+                         %EctoDiff{
+                           effect: :deleted,
+                           primary_key: %{id: ^ball_id},
+                           current: nil,
+                           changes: %{}
+                         }
+                       ]
+                     }
+                   }
+                 ],
+                 toys: [
+                   %EctoDiff{
+                     effect: :deleted,
+                     primary_key: %{id: ^ball_id},
+                     current: nil,
+                     changes: %{}
+                   }
+                 ]
+               }
+             } = diff
+    end
+
+    test "update that doesn't change a loaded has_many through does not include it in diff" do
+      {:ok, pet} =
+        %{name: "Spot", resources: [%{toys: [%{name: "ball", type: "play", quantity: 1}]}]}
+        |> Pet.new()
+        |> Repo.insert()
+
+      pet = Repo.preload(pet, :toys)
+
+      {:ok, updated_pet} = pet |> Pet.update(%{name: "McFluffFace"}) |> Repo.update()
+      id = pet.id
+
+      {:ok, diff} = EctoDiff.diff(pet, updated_pet)
+
+      assert %EctoDiff{
+               effect: :changed,
+               struct: Pet,
+               primary_key: %{id: id},
+               previous: pet,
+               current: updated_pet,
+               changes: %{
+                 name: {"Spot", "McFluffFace"}
+               }
+             } == diff
+    end
+
     # Embeds One Association
 
     test "no changes with embeds_one" do
@@ -671,7 +990,7 @@ defmodule EctoDiffTest do
              } = diff
     end
 
-    # TODO: the following case only tests embeds_one with on_replace: :update
+    # the following case only tests embeds_one with on_replace: :update
     # other cases should be written for other options to on_replace
 
     test "update an embeds_one using on_replace: :update" do
