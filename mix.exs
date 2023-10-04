@@ -83,7 +83,7 @@ defmodule EctoDiff.MixProject do
       {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.8", only: [:dev, :test]},
-      {:ecto, "~> 3.10.3"},
+      {:ecto, "~> 3.8"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14", only: :test},
       {:jason, ">= 1.0.0", only: [:dev, :test]},
