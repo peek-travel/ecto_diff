@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+- Nothing yet
+
+## [0.5.1][]
+
 - Implement diffing for has_many through associations, resolves associated error.
 
 ## [0.5.0][]
@@ -78,7 +82,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Initial release
 
-[Unreleased]: https://github.com/peek-travel/ecto_diff/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/peek-travel/ecto_diff/compare/0.5.1...HEAD
+[0.5.1]: https://github.com/peek-travel/ecto_diff/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/peek-travel/ecto_diff/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/peek-travel/ecto_diff/compare/0.3.0...0.4.0
 [0.3.0]: https://github.com/peek-travel/ecto_diff/compare/0.2.2...0.3.0
